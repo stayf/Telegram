@@ -3203,8 +3203,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         frameLayout.addView(undoView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT, 8, 0, 8, 8));
 
         noForwardHintView = new HintView(context, 4, false);
-        //todo если не канал другое сообщение
-        noForwardHintView.setText("Forwards from this channel are restricted");
+        noForwardHintView.setText(ChatObject.isChannelAndNotMegaGroup(currentChat) ? LocaleController.getString("ForwardsRestrictedChannelHint", R.string.ForwardsRestrictedChannelHint) : LocaleController.getString("ForwardsRestrictedGroupHint", R.string.ForwardsRestrictedGroupHint));
         noForwardHintView.setAlpha(0.0f);
         noForwardHintView.setVisibility(View.INVISIBLE);
         noForwardHintView.setShowingDuration(3000);

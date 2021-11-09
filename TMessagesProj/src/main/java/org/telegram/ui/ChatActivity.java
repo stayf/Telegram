@@ -98,7 +98,6 @@ import androidx.recyclerview.widget.LinearSmoothScrollerCustom;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
-import com.google.android.exoplayer2.util.Log;
 
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AccountInstance;
@@ -248,7 +247,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -2540,7 +2538,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, AndroidUtilities.dp(54), LocaleController.getString("Delete", R.string.Delete)));
         }
 
-        boolean isNoForwards = currentChat != null && currentChat.noforwards;
+        boolean isNoForwards = ChatObject.isPrivateWithNoForwards(currentChat);
         actionMode.getItem(edit).setVisibility(canEditMessagesCount == 1 && selectedMessagesIds[0].size() + selectedMessagesIds[1].size() == 1 ? View.VISIBLE : View.GONE);
         actionMode.getItem(copy).setVisibility((selectedMessagesCanCopyIds[0].size() + selectedMessagesCanCopyIds[1].size() != 0) && !isNoForwards ? View.VISIBLE : View.GONE);
         actionMode.getItem(star).setVisibility((selectedMessagesCanStarIds[0].size() + selectedMessagesCanStarIds[1].size() != 0) && !isNoForwards ? View.VISIBLE : View.GONE);
@@ -12373,7 +12371,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 ActionBarMenuItem starItem = actionBar.createActionMode().getItem(star);
                 ActionBarMenuItem editItem = actionBar.createActionMode().getItem(edit);
                 ActionBarMenuItem forwardItem = actionBar.createActionMode().getItem(forward);
-                boolean isNoForwards = currentChat != null && currentChat.noforwards;
+                boolean isNoForwards = ChatObject.isPrivateWithNoForwards(currentChat);
 
                 if (prevCantForwardCount == 0 && cantForwardMessagesCount != 0 || prevCantForwardCount != 0 && cantForwardMessagesCount == 0) {
                     forwardButtonAnimation = new AnimatorSet();
@@ -20032,7 +20030,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
                 if (a == N - 1 && isRemovedItems && !selectedObject.isSponsored()) {
                     ActionBarMenuSubItem noForwardsCell = new ActionBarMenuSubItem(getParentActivity(), true, true, themeDelegate);
-                    String text = ChatObject.isChannel(currentChat) ? "Forwards from this channel\nare restricted" : "Forwards from this group\nare restricted";
+                    String text = ChatObject.isChannelAndNotMegaGroup(currentChat) ? LocaleController.getString("ForwardsRestrictedChannelInfo", R.string.ForwardsRestrictedChannelInfo) : LocaleController.getString("ForwardsRestrictedGroupInfo", R.string.ForwardsRestrictedGroupInfo);
                     noForwardsCell.setText(text);
                     noForwardsCell.setItemHeight(56);
                     noForwardsCell.setPadding(noForwardsCell.getPaddingLeft(), noForwardsCell.getPaddingTop() + AndroidUtilities.dp(6), noForwardsCell.getPaddingRight(), noForwardsCell.getPaddingBottom());
@@ -23396,7 +23394,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     messageCell.linkedChatId = chatMode != MODE_SCHEDULED && chatInfo != null ? chatInfo.linked_chat_id : 0;
                     messageCell.isRepliesChat = UserObject.isReplyUser(currentUser);
                     messageCell.isPinnedChat = chatMode == MODE_PINNED;
-                    messageCell.isNoForward = currentChat != null && currentChat.noforwards;
+                    messageCell.isNoForward = ChatObject.isPrivateWithNoForwards(currentChat);
                     boolean pinnedBottom = false;
                     boolean pinnedBottomByGroup = false;
                     boolean pinnedTop = false;

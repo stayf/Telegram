@@ -58,6 +58,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.BuildVars;
+import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.DownloadController;
@@ -1046,16 +1047,11 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         optionsButton.addSubItem(4, R.drawable.msg_message, LocaleController.getString("ShowInChat", R.string.ShowInChat));
         optionsButton.setShowedFromBottom(true);
         optionsButton.setOnClickListener(v -> {
-            if (messageObject != null) {
-                TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-messageObject.getDialogId());
-                if (chat != null && chat.noforwards) {
-                    optionsButton.hideSubItem(1);
-                    optionsButton.hideSubItem(2);
-                    optionsButton.hideSubItem(5);
-                    optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(12));
-                } else {
-                    optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(157));
-                }
+            if (messageObject != null && ChatObject.isPrivateWithNoForwards(currentAccount, -messageObject.getDialogId())) {
+                optionsButton.hideSubItem(1);
+                optionsButton.hideSubItem(2);
+                optionsButton.hideSubItem(5);
+                optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(12));
             } else {
                 optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(157));
             }

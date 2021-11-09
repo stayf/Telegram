@@ -902,6 +902,10 @@
     <string name="OpenChannel">VIEW CHANNEL</string>
     <string name="OpenMessage">VIEW MESSAGE</string>
     <string name="OpenBot">OPEN BOT</string>
+    <string name="ForwardsRestrictedChannelHint">Forwards from this channel are restricted</string>
+    <string name="ForwardsRestrictedGroupHint">Forwards from this group are restricted</string>
+    <string name="ForwardsRestrictedChannelInfo">Forwards from this channel\nare restricted</string>
+    <string name="ForwardsRestrictedGroupInfo">Forwards from this group\nare restricted</string>
     <string name="SponsoredMessage">sponsored</string>
     <string name="SponsoredMessageInfo">What are sponsored\nmessages?</string>
     <string name="SponsoredMessageInfoDescription1">Unlike other apps, Telegram never uses your private data to target ads. You are seeing this message only because someone chose this public one-to-many channel as a space to promote their messages. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message.</string>

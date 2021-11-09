@@ -10781,8 +10781,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             isVideo = pageBlocksAdapter.isVideo(currentIndex);
         }
 
-        TLRPC.Chat currentChat = MessagesController.getInstance(currentAccount).getChat(-currentDialogId);
-        if (currentChat != null && currentChat.noforwards) {
+        if (ChatObject.isPrivateWithNoForwards(currentAccount, -currentDialogId)) {
             allowShare = false;
             menuItem.hideSubItem(gallery_menu_save);
             menuItem.hideSubItem(gallery_menu_share);
@@ -12005,7 +12004,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             } else {
                 windowLayoutParams.flags = WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
             }
-            if (chatActivity != null && (chatActivity.getCurrentEncryptedChat() != null) && chatActivity.getCurrentChat() != null && chatActivity.getCurrentChat().noforwards) {
+            if (chatActivity != null && (chatActivity.getCurrentEncryptedChat() != null || ChatObject.isPrivateWithNoForwards(chatActivity.getCurrentChat()))) {
                 windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
             } else {
                 windowLayoutParams.flags &=~ WindowManager.LayoutParams.FLAG_SECURE;

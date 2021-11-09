@@ -1432,15 +1432,13 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             actionModeLayout.addView(forwardItem, new LinearLayout.LayoutParams(AndroidUtilities.dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
             actionModeViews.add(forwardItem);
             forwardItem.setOnClickListener(v -> {
-                TLRPC.Chat chat = profileActivity.getMessagesController().getChat(-dialog_id);
-                if (chat != null && chat.noforwards && profileActivity instanceof ProfileActivity) {
+                if (profileActivity instanceof ProfileActivity && ChatObject.isPrivateWithNoForwards(profileActivity.getMessagesController().getChat(-dialog_id))) {
                     ((ProfileActivity) profileActivity).getNoForwardHintView().showForView(forwardItem, true);
                 } else {
                     onActionBarItemClick(forward);
                 }
             });
-            TLRPC.Chat chat = profileActivity.getMessagesController().getChat(-dialog_id);
-            forwardItem.setAlpha(chat != null && !chat.noforwards ? 1f : 0.5f);
+            forwardItem.setAlpha(ChatObject.isPrivateWithNoForwards(profileActivity.getMessagesController().getChat(-dialog_id)) ? 0.5f : 1f);
        }
         deleteItem = new ActionBarMenuItem(context, null, Theme.getColor(Theme.key_actionBarActionModeDefaultSelector), Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), false);
         deleteItem.setIcon(R.drawable.msg_delete);
