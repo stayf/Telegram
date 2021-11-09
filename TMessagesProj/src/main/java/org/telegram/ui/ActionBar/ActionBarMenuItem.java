@@ -971,8 +971,14 @@ public class ActionBarMenuItem extends FrameLayout {
     }
 
     public void closeSubMenu() {
-        if (popupWindow != null && popupWindow.isShowing()) {
+        if (isSubMenuShowing()) {
             popupWindow.dismiss();
+        }
+    }
+
+    public void closeSubMenu(boolean force) {
+        if (isSubMenuShowing()) {
+            popupWindow.dismiss(!force);
         }
     }
 

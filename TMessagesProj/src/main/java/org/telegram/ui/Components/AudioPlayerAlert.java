@@ -146,6 +146,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
     private boolean currentAudioFinishedLoading;
 
     private boolean scrollToSong = true;
+    private boolean wasNoForwards = false;
 
     private int searchOpenPosition = -1;
     private int searchOpenOffset;
@@ -247,6 +248,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.fileLoadProgressChanged);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.musicDidLoad);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.moreMusicDidLoad);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.chatInfoDidLoad);
 
         containerView = new FrameLayout(context) {
 
@@ -1047,12 +1049,15 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         optionsButton.addSubItem(4, R.drawable.msg_message, LocaleController.getString("ShowInChat", R.string.ShowInChat));
         optionsButton.setShowedFromBottom(true);
         optionsButton.setOnClickListener(v -> {
-            if (messageObject != null && ChatObject.isPrivateWithNoForwards(currentAccount, -messageObject.getDialogId())) {
+            if (messageObject != null && (wasNoForwards = ChatObject.isPrivateWithNoForwards(currentAccount, -messageObject.getDialogId()))) {
                 optionsButton.hideSubItem(1);
                 optionsButton.hideSubItem(2);
                 optionsButton.hideSubItem(5);
                 optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(12));
             } else {
+                optionsButton.showSubItem(1);
+                optionsButton.showSubItem(2);
+                optionsButton.showSubItem(5);
                 optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(157));
             }
             optionsButton.toggleSubMenu();
@@ -1581,6 +1586,17 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         } else if (id == NotificationCenter.musicDidLoad) {
             playlist = MediaController.getInstance().getPlaylist();
             listAdapter.notifyDataSetChanged();
+        } else if (id == NotificationCenter.chatInfoDidLoad) {
+            TLRPC.ChatFull chatFull = (TLRPC.ChatFull) args[0];
+            MessageObject messageObject = MediaController.getInstance().getPlayingMessageObject();
+            if (messageObject != null && chatFull.id == -messageObject.getDialogId()) {
+                boolean isNoForwards = ChatObject.isPrivateWithNoForwards(currentAccount, -messageObject.getDialogId());
+                if (isNoForwards != wasNoForwards && optionsButton.isSubMenuShowing()) {
+                    optionsButton.closeSubMenu(true);
+                    optionsButton.performClick();
+                }
+                wasNoForwards = isNoForwards;
+            }
         } else if (id == NotificationCenter.moreMusicDidLoad) {
             playlist = MediaController.getInstance().getPlaylist();
             listAdapter.notifyDataSetChanged();
@@ -1691,6 +1707,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.fileLoadProgressChanged);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.musicDidLoad);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.moreMusicDidLoad);
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.chatInfoDidLoad);
         DownloadController.getInstance(currentAccount).removeLoadingFileObserver(this);
     }
 

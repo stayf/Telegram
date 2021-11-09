@@ -1066,6 +1066,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private ImageReceiver leftImage = new ImageReceiver();
     private ImageReceiver centerImage = new ImageReceiver();
     private ImageReceiver rightImage = new ImageReceiver();
+    private boolean currentNoForwards;
     private int currentIndex;
     private int switchingToIndex;
     private MessageObject currentMessageObject;
@@ -3041,6 +3042,18 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     }
                     break;
                 }
+            }
+        } else if (id == NotificationCenter.chatInfoDidLoad) {
+            TLRPC.ChatFull chatFull = (TLRPC.ChatFull) args[0];
+            if (chatFull.id == -currentDialogId) {
+                boolean isNoForwards = ChatObject.isPrivateWithNoForwards(currentAccount, -currentDialogId);
+
+                if (isNoForwards != currentNoForwards) {
+                    int remCurrentIndex = currentIndex;
+                    currentIndex = -1;
+                    setImageIndex(remCurrentIndex);
+                }
+                currentNoForwards = isNoForwards;
             }
         } else if (id == NotificationCenter.fileLoadProgressChanged) {
             String location = (String) args[0];
@@ -10041,6 +10054,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         }
 
+        shareButton.setVisibility(View.VISIBLE);
+        sendItem.setVisibility(View.VISIBLE);
+
         if (!imagesArr.isEmpty()) {
             if (switchingToIndex < 0 || switchingToIndex >= imagesArr.size()) {
                 return;
@@ -10781,8 +10797,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             isVideo = pageBlocksAdapter.isVideo(currentIndex);
         }
 
-        if (ChatObject.isPrivateWithNoForwards(currentAccount, -currentDialogId)) {
-            allowShare = false;
+        if (currentNoForwards = ChatObject.isPrivateWithNoForwards(currentAccount, -currentDialogId)) {
             menuItem.hideSubItem(gallery_menu_save);
             menuItem.hideSubItem(gallery_menu_share);
             menuItem.hideSubItem(gallery_menu_savegif);
@@ -12038,6 +12053,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.filePreparingFailed);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.fileNewChunkAvailable);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.chatInfoDidLoad);
 
         placeProvider = provider;
         mergeDialogId = mDialogId;
@@ -12862,6 +12878,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.filePreparingFailed);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.fileNewChunkAvailable);
         ConnectionsManager.getInstance(currentAccount).cancelRequestsForGuid(classGuid);
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.chatInfoDidLoad);
     }
 
     public void destroyPhotoViewer() {
