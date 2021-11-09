@@ -1045,7 +1045,22 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         optionsButton.addSubItem(5, R.drawable.msg_download, LocaleController.getString("SaveToMusic", R.string.SaveToMusic));
         optionsButton.addSubItem(4, R.drawable.msg_message, LocaleController.getString("ShowInChat", R.string.ShowInChat));
         optionsButton.setShowedFromBottom(true);
-        optionsButton.setOnClickListener(v -> optionsButton.toggleSubMenu());
+        optionsButton.setOnClickListener(v -> {
+            if (messageObject != null) {
+                TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-messageObject.getDialogId());
+                if (chat != null && chat.noforwards) {
+                    optionsButton.hideSubItem(1);
+                    optionsButton.hideSubItem(2);
+                    optionsButton.hideSubItem(5);
+                    optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(12));
+                } else {
+                    optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(157));
+                }
+            } else {
+                optionsButton.setAdditionalYOffset(-AndroidUtilities.dp(157));
+            }
+            optionsButton.toggleSubMenu();
+        });
         optionsButton.setDelegate(this::onSubItemClick);
         optionsButton.setContentDescription(LocaleController.getString("AccDescrMoreOptions", R.string.AccDescrMoreOptions));
 

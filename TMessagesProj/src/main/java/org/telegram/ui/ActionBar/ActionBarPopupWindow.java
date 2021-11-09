@@ -34,6 +34,8 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.ScrollView;
 
+import com.google.android.exoplayer2.util.Log;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.NotificationCenter;
@@ -145,25 +147,34 @@ public class ActionBarPopupWindow extends PopupWindow {
                         gapStartY = -1000000;
                         gapEndY = -1000000;
                         ArrayList<View> viewsToFix = null;
+                        int viewsHeight = 0;
                         for (int a = 0, N = getChildCount(); a < N; a++) {
                             View view = getChildAt(a);
                             if (view.getVisibility() == GONE) {
                                 continue;
                             }
-                            Object tag = view.getTag(R.id.width_tag);
-                            Object tag2 = view.getTag(R.id.object_tag);
-                            if (tag != null) {
+                            Object widthTag = view.getTag(R.id.width_tag);
+                            Object objectTag = view.getTag(R.id.object_tag);
+                            Object withGapTag = view.getTag(R.id.with_gap_tag);
+                            if (widthTag != null) {
                                 view.getLayoutParams().width = LayoutHelper.WRAP_CONTENT;
                             }
                             measureChildWithMargins(view, widthMeasureSpec, 0, heightMeasureSpec, 0);
-                            if (!(tag instanceof Integer) && tag2 == null) {
+                            viewsHeight += view.getMeasuredHeight();
+
+                            if (!(widthTag instanceof Integer) && objectTag == null) {
                                 maxWidth = Math.max(maxWidth, view.getMeasuredWidth());
                                 continue;
-                            } else if (tag instanceof Integer) {
-                                fixWidth = Math.max((Integer) tag, view.getMeasuredWidth());
-                                gapStartY = view.getMeasuredHeight();
+                            } else if (widthTag instanceof Integer) {
+                                fixWidth = Math.max((Integer) widthTag, view.getMeasuredWidth());
+                                if (withGapTag != null && (Boolean) withGapTag) {
+                                    gapStartY = viewsHeight - view.getMeasuredHeight();
+                                } else {
+                                    gapStartY = view.getMeasuredHeight();
+                                }
                                 gapEndY = gapStartY + AndroidUtilities.dp(6);
                             }
+
                             if (viewsToFix == null) {
                                 viewsToFix = new ArrayList<>();
                             }

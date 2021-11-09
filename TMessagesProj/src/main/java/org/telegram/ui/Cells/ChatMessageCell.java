@@ -613,6 +613,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public boolean hasDiscussion;
     public boolean isPinned;
     private boolean wasPinned;
+    public boolean isNoForward;
+    private boolean wasNoForward;
     public long linkedChatId;
     public boolean isRepliesChat;
     public boolean isPinnedChat;
@@ -3070,6 +3072,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentMessageObject == messageObject && (isUserDataChanged() || photoNotSet) ||
                 lastPostAuthor != messageObject.messageOwner.post_author ||
                 wasPinned != isPinned ||
+                wasNoForward != isNoForward ||
                 newReply != lastReplyMessage;
         boolean groupChanged = groupedMessages != currentMessagesGroup;
         boolean pollChanged = false;
@@ -3126,6 +3129,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             pinnedTop = topNear;
             currentMessageObject = messageObject;
             currentMessagesGroup = groupedMessages;
+            wasNoForward = isNoForward;
             lastTime = -2;
             lastPostAuthor = messageObject.messageOwner.post_author;
             isHighlightedAnimated = false;
@@ -9599,7 +9603,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     private boolean checkNeedDrawShareButton(MessageObject messageObject) {
-        if (currentMessageObject.deleted || currentMessageObject.isSponsored()) {
+        if (currentMessageObject.deleted || currentMessageObject.isSponsored() || isNoForward) {
             return false;
         }
         if (currentPosition != null) {
@@ -14428,7 +14432,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                      } else if (virtualViewId == COMMENT) {
                         if (delegate != null) {
                             if (isRepliesChat) {
-                                delegate.didPressSideButton(ChatMessageCell.this);
+                                //delegate.didPressSideButton(ChatMessageCell.this);
                             } else {
                                 delegate.didPressCommentButton(ChatMessageCell.this);
                             }

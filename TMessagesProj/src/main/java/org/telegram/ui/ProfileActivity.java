@@ -148,6 +148,7 @@ import org.telegram.ui.Components.CombinedDrawable;
 import org.telegram.ui.Components.CrossfadeDrawable;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.FragmentContextView;
+import org.telegram.ui.Components.HintView;
 import org.telegram.ui.Components.IdenticonDrawable;
 import org.telegram.ui.Components.ImageUpdater;
 import org.telegram.ui.Components.LayoutHelper;
@@ -199,6 +200,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private CrossfadeDrawable verifiedCrossfadeDrawable;
     private ScamDrawable scamDrawable;
     private UndoView undoView;
+    private HintView noForwardHintView;
     private OverlaysView overlaysView;
     private SharedMediaLayout sharedMediaLayout;
     private StickerEmptyView emptyView;
@@ -3200,6 +3202,14 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         undoView = new UndoView(context);
         frameLayout.addView(undoView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT, 8, 0, 8, 8));
 
+        noForwardHintView = new HintView(context, 4, false);
+        //todo если не канал другое сообщение
+        noForwardHintView.setText("Forwards from this channel are restricted");
+        noForwardHintView.setAlpha(0.0f);
+        noForwardHintView.setVisibility(View.INVISIBLE);
+        noForwardHintView.setShowingDuration(3000);
+        frameLayout.addView(noForwardHintView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 10, 0, 10, 0));
+
         expandAnimator = ValueAnimator.ofFloat(0f, 1f);
         expandAnimator.addUpdateListener(anim -> {
             final int newTop = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
@@ -4912,6 +4922,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
     public UndoView getUndoView() {
         return undoView;
+    }
+
+    public HintView getNoForwardHintView() {
+        return noForwardHintView;
     }
 
     public boolean onBackPressed() {

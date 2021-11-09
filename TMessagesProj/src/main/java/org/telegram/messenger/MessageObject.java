@@ -1107,6 +1107,9 @@ public class MessageObject {
             } else {
                 messageText = replaceWithLink(LocaleController.formatString("EventLogEditedChannelTitle", R.string.EventLogEditedChannelTitle, title), "un1", fromUser);
             }
+        } else if (event.action instanceof TLRPC.TL_channelAdminLogEventActionToggleNoForwards) {
+            boolean noForwards = ((TLRPC.TL_channelAdminLogEventActionToggleNoForwards) event.action).new_value;
+            messageText = noForwards ? "Forwards are restricted" : "Forwards are unlimited";
         } else if (event.action instanceof TLRPC.TL_channelAdminLogEventActionChangePhoto) {
             TLRPC.TL_channelAdminLogEventActionChangePhoto action = (TLRPC.TL_channelAdminLogEventActionChangePhoto) event.action;
             messageOwner = new TLRPC.TL_messageService();
