@@ -15,6 +15,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
@@ -45,6 +46,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
     private long dialogId;
     private SimpleTextView nameTextView;
     ProfileActivity.AvatarImageView avatarImageView;
+    private HintView noForwardHintView;
 
     SharedMediaLayout sharedMediaLayout;
     AudioPlayerAlert.ClippingTextViewSwitcher mediaCounterTextView;
@@ -221,6 +223,13 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         fragmentView.addView(actionBar);
         fragmentView.addView(avatarContainer);
 
+        noForwardHintView = new HintView(context, 4, false);
+        noForwardHintView.setText(ChatObject.isChannelAndNotMegaGroup(-dialogId, currentAccount) ? LocaleController.getString("ForwardsRestrictedChannelHint", R.string.ForwardsRestrictedChannelHint) : LocaleController.getString("ForwardsRestrictedGroupHint", R.string.ForwardsRestrictedGroupHint));
+        noForwardHintView.setAlpha(0.0f);
+        noForwardHintView.setVisibility(View.INVISIBLE);
+        noForwardHintView.setShowingDuration(3000);
+        fragmentView.addView(noForwardHintView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 10, 0, 10, 0));
+
         TLObject avatarObject = null;
         if (DialogObject.isEncryptedDialog(dialogId)) {
             TLRPC.EncryptedChat encryptedChat = getMessagesController().getEncryptedChat(DialogObject.getEncryptedChatId(dialogId));
@@ -321,6 +330,9 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         updateMediaCount();
     }
 
+    public HintView getNoForwardHintView() {
+        return noForwardHintView;
+    }
 
     private void updateColors() {
         actionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));

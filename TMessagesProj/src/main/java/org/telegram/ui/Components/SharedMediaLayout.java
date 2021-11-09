@@ -1116,6 +1116,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.messagePlayingDidReset);
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.messagePlayingDidStart);
+        profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.chatInfoDidLoad);
 
         for (int a = 0; a < 10; a++) {
             //cellCache.add(new SharedPhotoVideoCell(context));
@@ -1432,8 +1433,13 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             actionModeLayout.addView(forwardItem, new LinearLayout.LayoutParams(AndroidUtilities.dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
             actionModeViews.add(forwardItem);
             forwardItem.setOnClickListener(v -> {
-                if (profileActivity instanceof ProfileActivity && ChatObject.isPrivateWithNoForwards(profileActivity.getMessagesController().getChat(-dialog_id))) {
-                    ((ProfileActivity) profileActivity).getNoForwardHintView().showForView(forwardItem, true);
+                if (ChatObject.isPrivateWithNoForwards(profileActivity.getMessagesController().getChat(-dialog_id))) {
+                    if (profileActivity instanceof ProfileActivity) {
+                        ((ProfileActivity) profileActivity).getNoForwardHintView().showForView(forwardItem, true);
+                    }
+                    if (profileActivity instanceof MediaActivity) {
+                        ((MediaActivity) profileActivity).getNoForwardHintView().showForView(forwardItem, true);
+                    }
                 } else {
                     onActionBarItemClick(forward);
                 }
@@ -2860,6 +2866,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.messagePlayingDidReset);
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.messagePlayingDidStart);
+        profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.chatInfoDidLoad);
     }
 
     private void checkCurrentTabValid() {
@@ -3762,6 +3769,11 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     }
                     updateTabs(true);
                 }
+            }
+        } else if (id == NotificationCenter.chatInfoDidLoad) {
+            TLRPC.ChatFull chatFull = (TLRPC.ChatFull) args[0];
+            if (dialog_id < 0 && chatFull.id == -dialog_id) {
+                forwardItem.setAlpha(ChatObject.isPrivateWithNoForwards(profileActivity.getMessagesController().getChat(-dialog_id)) ? 0.5f : 1f);
             }
         } else if (id == NotificationCenter.messageReceivedByServer) {
             Boolean scheduled = (Boolean) args[6];

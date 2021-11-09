@@ -10051,7 +10051,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             transitionSet.setDuration(220);
             transitionSet.setInterpolator(CubicBezierInterpolator.DEFAULT);
             TransitionManager.beginDelayedTransition(itemsLayout, transitionSet);
-
         }
 
         shareButton.setVisibility(View.VISIBLE);
