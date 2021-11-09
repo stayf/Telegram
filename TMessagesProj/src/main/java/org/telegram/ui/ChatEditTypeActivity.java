@@ -93,7 +93,7 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
     private TLRPC.ChatFull info;
     private long chatId;
     private boolean isChannel;
-    private boolean noForwards;
+    private boolean isNoForwards;
 
     private boolean canCreatePublic = true;
     private boolean loadingAdminedChannels;
@@ -140,7 +140,7 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
         }
         isPrivate = !isForcePublic && TextUtils.isEmpty(currentChat.username);
         isChannel = ChatObject.isChannel(currentChat) && !currentChat.megagroup;
-        noForwards = currentChat.noforwards;
+        isNoForwards = currentChat.noforwards;
         if (isForcePublic && TextUtils.isEmpty(currentChat.username) || isPrivate && currentChat.creator) {
             TLRPC.TL_channels_checkUsername req = new TLRPC.TL_channels_checkUsername();
             req.username = "1";
@@ -414,7 +414,6 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
             ignoreTextChanges = false;
         }
 
-
         linearLayoutSavingContentContainer = new LinearLayout(context);
         linearLayoutSavingContentContainer.setOrientation(LinearLayout.VERTICAL);
         linearLayoutSavingContentContainer.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
@@ -422,26 +421,21 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
 
         headerCell3 = new HeaderCell(context, 23);
         headerCell3.setHeight(46);
-        headerCell3.setText("Saving content"/*LocaleController.getString("ChannelTypeHeader", R.string.ChannelTypeHeader)*/);
+        headerCell3.setText(LocaleController.getString("RestrictContentHeader", R.string.RestrictContentHeader));
         linearLayoutSavingContentContainer.addView(headerCell3);
 
         restrictContentCell = new TextCheckCell(context);
         restrictContentCell.setBackgroundDrawable(Theme.getSelectorDrawable(false));
-        restrictContentCell.setTextAndCheck(
-                "Restrict saving content"/*LocaleController.getString("ChannelSignMessages", R.string.ChannelSignMessages)*/
-                /*LocaleController.getString("ChannelSignMessagesInfo", R.string.ChannelSignMessagesInfo)*/,
-                noForwards/*signMessages*/, false
-        );
+        restrictContentCell.setTextAndCheck(LocaleController.getString("RestrictContent", R.string.RestrictContent), isNoForwards, false);
         linearLayoutSavingContentContainer.addView(restrictContentCell, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         restrictContentCell.setOnClickListener(v -> {
-            noForwards = !noForwards;
-            ((TextCheckCell) v).setChecked(noForwards);
+            isNoForwards = !isNoForwards;
+            ((TextCheckCell) v).setChecked(isNoForwards);
         });
-
         restrictContentInfoCell = new TextInfoPrivacyCell(context);
         linearLayout.addView(restrictContentInfoCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         restrictContentInfoCell.setBackground(Theme.getThemedDrawable(typeInfoCell.getContext(), R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
-        restrictContentInfoCell.setText("Participants won’t be able to forward messages from this group or save media files."/*LocaleController.getString("ManageLinksInfoHelp", R.string.ManageLinksInfoHelp)*/);
+        restrictContentInfoCell.setText(LocaleController.getString("RestrictContentInfoHelp", R.string.RestrictContentInfoHelp));
 
         updatePrivatePublic();
 
@@ -510,8 +504,8 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
             }
         }
 
-        if (isPrivate && currentChat.noforwards != noForwards) {
-            getMessagesController().updateRestrictContent(currentChat, noForwards);
+        if (isPrivate && currentChat.noforwards != isNoForwards) {
+            getMessagesController().updateRestrictContent(currentChat, isNoForwards);
         }
 
         finishFragment();
@@ -620,8 +614,8 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
             }
             publicContainer.setVisibility(isPrivate ? View.GONE : View.VISIBLE);
             privateContainer.setVisibility(isPrivate ? View.VISIBLE : View.GONE);
-            manageLinksTextView.setVisibility(View.VISIBLE);
-            manageLinksInfoCell.setVisibility(View.VISIBLE);
+            manageLinksTextView.setVisibility(isPrivate ? View.GONE : View.VISIBLE);
+            manageLinksInfoCell.setVisibility(isPrivate ? View.GONE : View.VISIBLE);
             linkContainer.setPadding(0, 0, 0, isPrivate ? 0 : AndroidUtilities.dp(7));
             permanentLinkView.setLink(invite != null ? invite.link : null);
             permanentLinkView.loadUsers(invite, chatId);
@@ -634,6 +628,9 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
                 typeInfoCell.setBackgroundDrawable(checkTextView.getVisibility() == View.VISIBLE ? null : Theme.getThemedDrawable(typeInfoCell.getContext(), R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
             }
         }
+
+        restrictContentInfoCell.setVisibility(isPrivate ? View.VISIBLE: View.GONE);
+        linearLayoutSavingContentContainer.setVisibility(isPrivate ? View.VISIBLE: View.GONE);
         radioButtonCell1.setChecked(!isPrivate, true);
         radioButtonCell2.setChecked(isPrivate, true);
         usernameTextView.clearFocus();

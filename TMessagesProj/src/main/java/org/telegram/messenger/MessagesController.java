@@ -9156,29 +9156,7 @@ public class MessagesController extends BaseController implements NotificationCe
         TLRPC.TL_messages_toggleNoForwards req = new TLRPC.TL_messages_toggleNoForwards();
         req.enabled = enabled;
         req.peer = getInputPeer(chat);
-        getConnectionsManager().sendRequest(req, (response, error) -> {
-            Log.e("xxxx","xxxx=" + enabled + "==" + response);
-            if(error == null) {
-               // getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_CHAT);
-            }
-            if (response instanceof TLRPC.TL_updates) {
-
-                Log.e("xxxx","xxxx2222=" + enabled);
-               /* AndroidUtilities.runOnUIThread(() -> {
-                    TLRPC.Chat chat = getChat(chatId);
-                    if (userName.length() != 0) {
-                        chat.flags |= TLRPC.CHAT_FLAG_IS_PUBLIC;
-                    } else {
-                        chat.flags &= ~TLRPC.CHAT_FLAG_IS_PUBLIC;
-                    }
-                    chat.username = userName;
-                    ArrayList<TLRPC.Chat> arrayList = new ArrayList<>();
-                    arrayList.add(chat);
-                    getMessagesStorage().putUsersAndChats(null, arrayList, true, true);
-                    getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_CHAT);
-                });*/
-            }
-        }, ConnectionsManager.RequestFlagInvokeAfter);
+        getConnectionsManager().sendRequest(req, null, ConnectionsManager.RequestFlagInvokeAfter);
     }
 
     public void sendBotStart(final TLRPC.User user, String botHash) {

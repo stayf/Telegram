@@ -14432,7 +14432,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                      } else if (virtualViewId == COMMENT) {
                         if (delegate != null) {
                             if (isRepliesChat) {
-                                //delegate.didPressSideButton(ChatMessageCell.this);
+                                delegate.didPressSideButton(ChatMessageCell.this);
                             } else {
                                 delegate.didPressCommentButton(ChatMessageCell.this);
                             }

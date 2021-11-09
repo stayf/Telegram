@@ -592,6 +592,8 @@
     <string name="TypePublic">Public</string>
     <string name="TypePrivateGroup">Private</string>
     <string name="TypePublicGroup">Public</string>
+    <string name="TypePrivateRestricted">Private restricted</string>
+    <string name="TypePrivateGroupRestricted">Private restricted</string>
     <string name="TypeLocationGroup">Link</string>
     <string name="TypeLocationGroupEdit">Tap to add a permanent link</string>
     <string name="ChoosePhoto">Choose photo</string>
@@ -727,6 +729,8 @@
     <string name="EventLogInfoDetailChannel">This is a list of all service actions taken by the channel\'s admins in the last 48 hours.</string>
     <string name="EventLogEditedGroupTitle">un1 renamed the group to \"%1$s\"</string>
     <string name="EventLogEditedChannelTitle">un1 renamed the channel to \"%1$s\"</string>
+    <string name="EventLogForwardsRestrictedTitle">Forwards are restricted</string>
+    <string name="EventLogForwardsUnlimitedTitle">Forwards are unlimited</string>
     <string name="EventLogLeftGroup">un1 left the group</string>
     <string name="EventLogLeftChannel">un1 left the channel</string>
     <string name="EventLogAdded">un1 added un2</string>
@@ -3809,6 +3813,9 @@
     <!--invite links-->
     <string name="ManageInviteLinks">Manage Invite Links</string>
     <string name="ManageLinksInfoHelp">You can create additional invite links that have a limited time or number of uses</string>
+    <string name="RestrictContentHeader">Saving content</string>
+    <string name="RestrictContent">Restrict saving content</string>
+    <string name="RestrictContentInfoHelp">Participants won’t be able to forward messages from this group or save media files.</string>
     <string name="PrimaryLinkHelp">Anyone on Telegram will be able to join your group by following this link.</string>
     <string name="PrimaryLinkHelpChannel">Anyone on Telegram will be able to join your channel by following this link.</string>
     <string name="EditLink">Edit link</string>

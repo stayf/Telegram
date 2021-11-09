@@ -1109,7 +1109,7 @@ public class MessageObject {
             }
         } else if (event.action instanceof TLRPC.TL_channelAdminLogEventActionToggleNoForwards) {
             boolean noForwards = ((TLRPC.TL_channelAdminLogEventActionToggleNoForwards) event.action).new_value;
-            messageText = noForwards ? "Forwards are restricted" : "Forwards are unlimited";
+            messageText = noForwards ? LocaleController.getString("EventLogForwardsRestrictedTitle", R.string.EventLogForwardsRestrictedTitle) : LocaleController.getString("EventLogForwardsUnlimitedTitle", R.string.EventLogForwardsUnlimitedTitle);
         } else if (event.action instanceof TLRPC.TL_channelAdminLogEventActionChangePhoto) {
             TLRPC.TL_channelAdminLogEventActionChangePhoto action = (TLRPC.TL_channelAdminLogEventActionChangePhoto) event.action;
             messageOwner = new TLRPC.TL_messageService();

@@ -1503,6 +1503,15 @@ public class ChatObject {
         return chat != null && (chat.creator || chat.admin_rights != null && chat.admin_rights.flags != 0);
     }
 
+    public static boolean isPrivateWithNoForwards(TLRPC.Chat chat) {
+        return chat != null && chat.noforwards && TextUtils.isEmpty(chat.username);
+    }
+
+    public static boolean isPrivateWithNoForwards(int currentAccount, long chatId) {
+        TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
+        return isPrivateWithNoForwards(chat);
+    }
+
     public static boolean canChangeChatInfo(TLRPC.Chat chat) {
         return canUserDoAction(chat, ACTION_CHANGE_INFO);
     }
