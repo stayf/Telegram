@@ -269,6 +269,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
     private Dialog closeChatDialog;
     private boolean showCloseChatDialogLater;
+    private boolean currentNoForwards;
     private FrameLayout progressView;
     private View progressView2;
     private FrameLayout bottomOverlay;
@@ -1374,6 +1375,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             if (ChatObject.isChannel(currentChat)) {
                 getMessagesController().startShortPoll(currentChat, classGuid, false);
             }
+            currentNoForwards = ChatObject.isPrivateWithNoForwards(currentChat);
         } else if (userId != 0) {
             currentUser = getMessagesController().getUser(userId);
             if (currentUser == null) {
@@ -12376,13 +12378,13 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 if (prevCantForwardCount == 0 && cantForwardMessagesCount != 0 || prevCantForwardCount != 0 && cantForwardMessagesCount == 0) {
                     forwardButtonAnimation = new AnimatorSet();
                     ArrayList<Animator> animators = new ArrayList<>();
-                    if (forwardItem != null && !isNoForwards) {
-                        forwardItem.setEnabled(cantForwardMessagesCount == 0);
-                        animators.add(ObjectAnimator.ofFloat(forwardItem, View.ALPHA, cantForwardMessagesCount == 0 ? 1.0f : 0.5f));
+                    if (forwardItem != null) {
+                        forwardItem.setEnabled(cantForwardMessagesCount == 0 && !isNoForwards);
+                        animators.add(ObjectAnimator.ofFloat(forwardItem, View.ALPHA, cantForwardMessagesCount == 0 && !isNoForwards ? 1.0f : 0.5f));
                     }
-                    if (forwardButton != null && !isNoForwards) {
+                    if (forwardButton != null) {
                         forwardButton.setEnabled(cantForwardMessagesCount == 0);
-                        animators.add(ObjectAnimator.ofFloat(forwardButton, View.ALPHA, cantForwardMessagesCount == 0 ? 1.0f : 0.5f));
+                        animators.add(ObjectAnimator.ofFloat(forwardButton, View.ALPHA, cantForwardMessagesCount == 0 && !isNoForwards ? 1.0f : 0.5f));
                     }
                     forwardButtonAnimation.playTogether(animators);
                     forwardButtonAnimation.setDuration(100);
@@ -12394,13 +12396,13 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     });
                     forwardButtonAnimation.start();
                 } else {
-                    if (forwardItem != null && !isNoForwards) {
-                        forwardItem.setEnabled(cantForwardMessagesCount == 0);
-                        forwardItem.setAlpha(cantForwardMessagesCount == 0 ? 1.0f : 0.5f);
+                    if (forwardItem != null) {
+                        forwardItem.setEnabled(cantForwardMessagesCount == 0 && !isNoForwards);
+                        forwardItem.setAlpha(cantForwardMessagesCount == 0 && !isNoForwards ? 1.0f : 0.5f);
                     }
-                    if (forwardButton != null && !isNoForwards) {
-                        forwardButton.setEnabled(cantForwardMessagesCount == 0);
-                        forwardButton.setAlpha(cantForwardMessagesCount == 0 ? 1.0f : 0.5f);
+                    if (forwardButton != null) {
+                        forwardButton.setEnabled(cantForwardMessagesCount == 0 && !isNoForwards);
+                        forwardButton.setAlpha(cantForwardMessagesCount == 0 && !isNoForwards ? 1.0f : 0.5f);
                     }
                 }
                 if (saveItem != null) {
@@ -14648,10 +14650,26 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     }
                 }
 
-                //todo тут нужно завязаться на флаг чтобы не обновлять без надобности
-                if (ChatObject.isChannel(currentChat) && chatAdapter != null) {
-                    chatAdapter.notifyDataSetChanged(false);
+                boolean isNoForwards = ChatObject.isPrivateWithNoForwards(currentAccount, chatInfo.id);
+                if (currentNoForwards != isNoForwards) {
+                    if (scrimPopupWindow != null && scrimPopupWindow.isShowing()) {
+                        scrimPopupWindow.dismiss();
+                    }
+                    if (actionBar != null && actionBar.isActionModeShowed()) {
+                        addToSelectedMessages(null, false);
+                    }
+                    if (chatAdapter != null) {
+                        chatAdapter.notifyDataSetChanged(false);
+                    }
+                    try {
+                        if (Build.VERSION.SDK_INT >= 23) {
+                            AndroidUtilities.setFlagSecure(this, isNoForwards);
+                        }
+                    } catch (Throwable e) {
+                        FileLog.e(e);
+                    }
                 }
+                currentNoForwards = isNoForwards;
 
                 checkGroupCallJoin((Boolean) args[3]);
                 checkThemeEmoticon();

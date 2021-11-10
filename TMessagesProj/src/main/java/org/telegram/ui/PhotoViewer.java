@@ -3052,6 +3052,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     int remCurrentIndex = currentIndex;
                     currentIndex = -1;
                     setImageIndex(remCurrentIndex);
+                    try {
+                        if (isNoForwards) {
+                            windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
+                        } else {
+                            windowLayoutParams.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
+                        }
+                    } catch (Exception e) {
+                        FileLog.e(e);
+                    }
                 }
                 currentNoForwards = isNoForwards;
             }
