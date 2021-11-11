@@ -6297,7 +6297,7 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
         }
     }
 
-    private void updateAvatarButton() {
+    public void updateAvatarButton() {
         if (info != null && info.default_send_as != null) {
             TLRPC.Peer sendAs = info.default_send_as;
             long dialogId = DialogObject.getPeerDialogId(sendAs);
