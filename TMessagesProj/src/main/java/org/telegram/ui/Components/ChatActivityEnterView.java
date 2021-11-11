@@ -3804,6 +3804,7 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
         }
         setSlowModeTimer(chatInfo.slowmode_next_send_date);
         updateAvatarButton();
+        updateFieldHint(false);
     }
 
     public void checkRoundVideo() {
@@ -3860,7 +3861,12 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
             if (DialogObject.isChatDialog(dialog_id)) {
                 TLRPC.Chat chat = accountInstance.getMessagesController().getChat(-dialog_id);
                 isChannel = ChatObject.isChannel(chat) && !chat.megagroup;
-                anonymously = ChatObject.shouldSendAnonymously(chat);
+                if (ChatObject.shouldSendAnonymously(chat)) {
+                    TLRPC.ChatFull chatFull = accountInstance.getMessagesController().getChatFull(chat.id);
+                    if (chatFull != null && chatFull.default_send_as != null && chatFull.default_send_as.channel_id != 0) {
+                        anonymously = chatFull.default_send_as.channel_id == chat.id;
+                    }
+                }
             }
             if (anonymously) {
                 messageEditText.setHintText(LocaleController.getString("SendAnonymously", R.string.SendAnonymously));
