@@ -61,16 +61,14 @@ public class SendAsAlert {
     private Delegate delegate;
     private AccountInstance accountInstance;
     private long dialogId;
-    private TLRPC.ChatFull info;
 
-    public void open(Context context, long dialogId, AccountInstance accountInstance, TLRPC.Peer currentPeer, View parent, Delegate delegate, TLRPC.ChatFull info) {
+    public void open(Context context, long dialogId, AccountInstance accountInstance, TLRPC.Peer currentPeer, View parent, Delegate delegate) {
         if (context == null || isLoading || delegate == null) {
             return;
         }
         this.delegate = delegate;
         this.accountInstance = accountInstance;
         this.dialogId = dialogId;
-        this.info = info;
         if (lastCachedAccount == accountInstance.getCurrentAccount() && lastCacheDid == dialogId && cachedChats != null && SystemClock.elapsedRealtime() - lastCacheTime < 2 * 60 * 1000) {
             showAlert(context, cachedChats, currentPeer, parent);
         } else {
@@ -148,7 +146,7 @@ public class SendAsAlert {
                     ((GroupCreateUserCell) child).setChecked(false, true);
                 }
             }
-            accountInstance.getMessagesController().updateSendUs(dialogId, selectedPeer, info, () -> {
+            accountInstance.getMessagesController().updateSendUs(dialogId, selectedPeer, () -> {
                 dismiss(false);
                 clearCache();
             });

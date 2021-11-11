@@ -6323,7 +6323,7 @@ public class ChatActivityEnterView extends FrameLayout implements NotificationCe
                     public void popupClosed(boolean force) {
                         avatarImage.cancelDeleteAnimation();
                     }
-                }, info);
+                });
             });
         } else {
             avatarImage.setVisibility(GONE);
