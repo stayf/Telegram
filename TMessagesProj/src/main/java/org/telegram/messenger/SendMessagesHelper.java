@@ -1648,6 +1648,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             String rank = null;
             long linkedToGroup = 0;
             TLRPC.Chat chat;
+            TLRPC.InputPeer sendAsPeer = null;
             if (DialogObject.isUserDialog(peer)) {
                 TLRPC.User sendToUser = getMessagesController().getUser(peer);
                 if (sendToUser == null) {
@@ -1659,15 +1660,16 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 if (ChatObject.isChannel(chat)) {
                     isSignature = chat.signatures;
                     isChannel = !chat.megagroup;
-
-                    if (isChannel && chat.has_link) {
-                        TLRPC.ChatFull chatFull = getMessagesController().getChatFull(chat.id);
-                        if (chatFull != null) {
-                            linkedToGroup = chatFull.linked_chat_id;
-                        }
+                    TLRPC.ChatFull chatFull = getMessagesController().getChatFull(chat.id);
+                    if (isChannel && chat.has_link && chatFull != null) {
+                        linkedToGroup = chatFull.linked_chat_id;
                     }
                 }
                 if (chat != null) {
+                    TLRPC.ChatFull chatFull = getMessagesController().getChatFull(chat.id);
+                    if (chatFull != null && chatFull.default_send_as != null) {
+                        sendAsPeer = getMessagesController().getInputPeer(chatFull.default_send_as);
+                    }
                     rank = getMessagesController().getAdminRank(chat.id, myId);
                 }
                 canSendStickers = ChatObject.canSendStickers(chat);
@@ -1922,6 +1924,12 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                         newMsg.media_unread = true;
                     }
                 }
+
+                if (sendAsPeer != null && sendAsPeer.channel_id != 0) {
+                    newMsg.from_id = new TLRPC.TL_peerChannel();
+                    newMsg.from_id.channel_id = sendAsPeer.channel_id;
+                }
+
                 MessageObject newMsgObj = new MessageObject(currentAccount, newMsg, true, true);
                 newMsgObj.scheduled = scheduleDate != 0;
                 newMsgObj.messageOwner.send_state = MessageObject.MESSAGE_SEND_STATE_SENDING;
@@ -1945,6 +1953,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     final TLRPC.TL_messages_forwardMessages req = new TLRPC.TL_messages_forwardMessages();
                     req.to_peer = inputPeer;
                     req.silent = !notify || MessagesController.getNotificationsSettings(currentAccount).getBoolean("silent_" + peer, false);
+                    req.send_as = sendAsPeer;
                     if (scheduleDate != 0) {
                         req.schedule_date = scheduleDate;
                         req.flags |= 1024;
@@ -3105,6 +3114,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         long linkedToGroup = 0;
         TLRPC.EncryptedChat encryptedChat = null;
         TLRPC.InputPeer sendToPeer = !DialogObject.isEncryptedDialog(peer) ? getMessagesController().getInputPeer(peer) : null;
+        TLRPC.InputPeer sendAsPeer = null;
         long myId = getUserConfig().getClientUserId();
         if (DialogObject.isEncryptedDialog(peer)) {
             encryptedChat = getMessagesController().getEncryptedChat(DialogObject.getEncryptedChatId(peer));
@@ -3120,12 +3130,17 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         } else if (sendToPeer instanceof TLRPC.TL_inputPeerChannel) {
             TLRPC.Chat chat = getMessagesController().getChat(sendToPeer.channel_id);
             isChannel = chat != null && !chat.megagroup;
-            if (isChannel && chat.has_link) {
+
+            if (chat != null) {
                 TLRPC.ChatFull chatFull = getMessagesController().getChatFull(chat.id);
-                if (chatFull != null) {
+                if (isChannel && chat.has_link && chatFull != null) {
                     linkedToGroup = chatFull.linked_chat_id;
                 }
+                if (chatFull != null && chatFull.default_send_as != null) {
+                    sendAsPeer = getMessagesController().getInputPeer(chatFull.default_send_as);
+                }
             }
+
             anonymously = ChatObject.shouldSendAnonymously(chat);
         }
 
@@ -3565,6 +3580,12 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             if (newMsg.from_id == null) {
                 newMsg.from_id = newMsg.peer_id;
             }
+
+            if (sendAsPeer != null && sendAsPeer.channel_id != 0) {
+                newMsg.from_id = new TLRPC.TL_peerChannel();
+                newMsg.from_id.channel_id = sendAsPeer.channel_id;
+            }
+
             newMsg.send_state = MessageObject.MESSAGE_SEND_STATE_SENDING;
 
             long groupId = 0;
@@ -3637,6 +3658,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     reqSend.silent = newMsg.silent;
                     reqSend.peer = sendToPeer;
                     reqSend.random_id = newMsg.random_id;
+                    reqSend.send_as = sendAsPeer;
                     if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                         reqSend.flags |= 1;
                         reqSend.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;
@@ -3959,6 +3981,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                             request = new TLRPC.TL_messages_sendMultiMedia();
                             request.peer = sendToPeer;
                             request.silent = newMsg.silent;
+                            request.send_as = sendAsPeer;
                             if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                                 request.flags |= 1;
                                 request.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;
@@ -3991,6 +4014,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                         TLRPC.TL_messages_sendMedia request = new TLRPC.TL_messages_sendMedia();
                         request.peer = sendToPeer;
                         request.silent = newMsg.silent;
+                        request.send_as = sendAsPeer;
                         if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                             request.flags |= 1;
                             request.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;
@@ -4331,6 +4355,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 TLRPC.TL_messages_forwardMessages reqSend = new TLRPC.TL_messages_forwardMessages();
                 reqSend.to_peer = sendToPeer;
                 reqSend.with_my_score = retryMessageObject.messageOwner.with_my_score;
+                reqSend.send_as = sendAsPeer;
                 if (params != null && params.containsKey("fwd_id")) {
                     int fwdId = Utilities.parseInt(params.get("fwd_id"));
                     reqSend.drop_author = true;
@@ -4372,6 +4397,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 reqSend.peer = sendToPeer;
                 reqSend.random_id = newMsg.random_id;
                 reqSend.hide_via = !params.containsKey("bot");
+                reqSend.send_as = sendAsPeer;
                 if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                     reqSend.flags |= 1;
                     reqSend.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;

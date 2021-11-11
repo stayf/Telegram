@@ -19312,6 +19312,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             scrimPopupWindow.dismiss();
             scrimView = null;
         }
+        if (chatActivityEnterView != null) {
+            chatActivityEnterView.onConfigurationChanged();
+        }
 
         if (!AndroidUtilities.isTablet()) {
             if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {

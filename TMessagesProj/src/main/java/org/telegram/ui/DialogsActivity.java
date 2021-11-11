@@ -167,6 +167,7 @@ import org.telegram.ui.Components.RadialProgress2;
 import org.telegram.ui.Components.RecyclerAnimationScrollHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SearchViewPager;
+import org.telegram.ui.Components.SendAsAlert;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
 import org.telegram.ui.Components.StickersAlert;
 import org.telegram.ui.Components.SwipeGestureSettingsView;
@@ -3027,11 +3028,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     }
                     if (searchString != null) {
                         if (getMessagesController().checkCanOpenChat(args, DialogsActivity.this)) {
+                            SendAsAlert.clearCache();
                             getNotificationCenter().postNotificationName(NotificationCenter.closeChats);
                             presentFragment(new ChatActivity(args));
                         }
                     } else {
                         if (getMessagesController().checkCanOpenChat(args, DialogsActivity.this)) {
+                            SendAsAlert.clearCache();
                             presentFragment(new ChatActivity(args));
                         }
                     }
@@ -4883,11 +4886,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             if (searchString != null) {
                 if (getMessagesController().checkCanOpenChat(args, DialogsActivity.this)) {
+                    SendAsAlert.clearCache();
                     getNotificationCenter().postNotificationName(NotificationCenter.closeChats);
                     presentFragment(new ChatActivity(args));
                 }
             } else {
                 if (getMessagesController().checkCanOpenChat(args, DialogsActivity.this)) {
+                    SendAsAlert.clearCache();
                     ChatActivity chatActivity = new ChatActivity(args);
                     if (adapter instanceof DialogsAdapter && DialogObject.isUserDialog(dialogId) && (getMessagesController().dialogs_dict.get(dialogId) == null)) {
                         TLRPC.Document sticker = getMediaDataController().getGreetingsSticker();
