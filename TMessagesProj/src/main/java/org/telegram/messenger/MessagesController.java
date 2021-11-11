@@ -6085,6 +6085,10 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (chat == null || !chat.megagroup) {
                     return false;
                 }
+                TLRPC.ChatFull chatFull = getChatFull(chat.id);
+                if (chatFull != null && chatFull.default_send_as != null && chatFull.default_send_as.channel_id != 0) {
+                    return false;
+                }
             }
             if (req.peer == null) {
                 return false;
@@ -9152,15 +9156,22 @@ public class MessagesController extends BaseController implements NotificationCe
         }, ConnectionsManager.RequestFlagInvokeAfter);
     }
 
-    public void updateSendUs(long dialogId, TLRPC.Peer selectedPeer, TLRPC.ChatFull info) {
+    public void updateSendUs(long dialogId, TLRPC.Peer selectedPeer, TLRPC.ChatFull info, Runnable errorCallback) {
         TLRPC.TL_messages_saveDefaultSendAs req = new TLRPC.TL_messages_saveDefaultSendAs();
         req.peer = getInputPeer(dialogId);
         req.send_as = getInputPeer(selectedPeer);
         getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-            if (response instanceof TLRPC.TL_boolTrue && info != null) {
-                info.default_send_as = selectedPeer;
-                getMessagesStorage().updateChatInfo(info, false);
-                getNotificationCenter().postNotificationName(NotificationCenter.chatInfoDidLoad, info, 0, false, false);
+            if (response != null) {
+                if (response instanceof TLRPC.TL_boolTrue && info != null) {
+                    info.default_send_as = selectedPeer;
+                    getMessagesStorage().updateChatInfo(info, false);
+                    getNotificationCenter().postNotificationName(NotificationCenter.chatInfoDidLoad, info, 0, false, false);
+                }
+            } else {
+                if (error != null && (error.text.contains("SEND_AS_PEER_INVALID") || error.text.contains("CHANNEL_INVALID"))) {
+                    loadFullChat(info.id, 0, true);
+                    errorCallback.run();
+                }
             }
         }));
     }

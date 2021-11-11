@@ -148,7 +148,10 @@ public class SendAsAlert {
                     ((GroupCreateUserCell) child).setChecked(false, true);
                 }
             }
-            accountInstance.getMessagesController().updateSendUs(dialogId, selectedPeer, info);
+            accountInstance.getMessagesController().updateSendUs(dialogId, selectedPeer, info, () -> {
+                dismiss(false);
+                clearCache();
+            });
         });
 
         containerLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
