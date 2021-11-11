@@ -219,6 +219,7 @@ import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.ReportAlert;
 import org.telegram.ui.Components.SearchCounterView;
 import org.telegram.ui.Components.ShareAlert;
+import org.telegram.ui.Components.SharedMediaLayout;
 import org.telegram.ui.Components.Size;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
 import org.telegram.ui.Components.StickersAlert;
@@ -1296,6 +1297,20 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 processRowSelect(view, outside, x, y);
                 return;
             }
+
+            if (view instanceof ChatActionCell) {
+                ChatActionCell cell = ((ChatActionCell) view);
+                MessageObject messageObject = cell.getMessageObject();
+                if (messageObject.isDateObject) {
+                    int date = messageObject.messageOwner.date;
+                    Bundle bundle = new Bundle();
+                    bundle.putLong("dialog_id", dialog_id);
+                    MediaCalendarActivity calendarActivity = new MediaCalendarActivity(bundle, SharedMediaLayout.FILTER_PHOTOS_AND_VIDEOS, date);
+                    presentFragment(calendarActivity);
+                    return;
+                }
+            }
+
             createMenu(view, true, false, x, y);
         }
     };
@@ -5342,7 +5357,12 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
             calendar.clear();
             calendar.set(year, monthOfYear, dayOfMonth);
-            jumpToDate((int) (calendar.getTime().getTime() / 1000));
+
+            int date = (int) (calendar.getTime().getTime() / 1000);
+            Bundle bundle = new Bundle();
+            bundle.putLong("dialog_id", dialog_id);
+            MediaCalendarActivity calendarActivity = new MediaCalendarActivity(bundle, SharedMediaLayout.FILTER_PHOTOS_AND_VIDEOS, date);
+            presentFragment(calendarActivity);
         });
 
         if (currentChat != null) {

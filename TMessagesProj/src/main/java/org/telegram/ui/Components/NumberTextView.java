@@ -39,9 +39,19 @@ public class NumberTextView extends View {
     private boolean center;
     private float textWidth;
     private float oldTextWidth;
+    private String zeroText;
+    private String suffixText;
 
     public NumberTextView(Context context) {
         super(context);
+    }
+
+    public void setZeroText(String text) {
+        zeroText = text;
+    }
+
+    public void setSuffix(String text) {
+        suffixText = text;
     }
 
     @Keep
@@ -84,6 +94,11 @@ public class NumberTextView extends View {
             oldText = String.format(Locale.US, "%d", currentNumber);
             text = String.format(Locale.US, "%d", number);
             forwardAnimation = number > currentNumber;
+        }
+        if (number == 0 && zeroText != null) {
+            text = zeroText;
+        } else if (suffixText != null) {
+            text += suffixText;
         }
         boolean replace = false;
         if (center) {
