@@ -360,6 +360,10 @@ public abstract class BaseFragment {
         return null;
     }
 
+    public boolean presentFragmentAsPreviewWithMenu(BaseFragment fragment) {
+        return parentLayout != null && parentLayout.presentFragmentAsPreviewWithMenu(fragment);
+    }
+
     public boolean presentFragmentAsPreview(BaseFragment fragment) {
         return parentLayout != null && parentLayout.presentFragmentAsPreview(fragment);
     }

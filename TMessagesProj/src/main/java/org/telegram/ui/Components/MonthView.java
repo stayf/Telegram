@@ -1,14 +1,17 @@
 package org.telegram.ui.Components;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.os.Bundle;
+import android.graphics.Path;
+import android.graphics.RectF;
 import android.text.TextPaint;
 import android.util.SparseArray;
 import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.widget.FrameLayout;
 
 import androidx.core.graphics.ColorUtils;
@@ -37,13 +40,27 @@ public class MonthView extends FrameLayout {
         public boolean wasDrawn;
     }
 
-    public interface Callback {
-        void onDateSelected(int messageId, int startOffset);
-        boolean onCheckEnterItems();
-        int getListViewHeight();
+    public static class VisibleDay {
+        public int date;
+        public int dayOfWeek;
+        public RectF drawRegion = new RectF();
+        public boolean isAvailable;
     }
 
-    private int currentAccount = UserConfig.selectedAccount;
+    public interface Callback {
+
+        boolean onCheckEnterItems();
+
+        int getListViewHeight();
+
+        void onLongPress(int time);
+
+        void onSelectDate(int time);
+
+        void onClick(PeriodDay periodDay);
+    }
+
+    private final int currentAccount = UserConfig.selectedAccount;
 
     SimpleTextView titleView;
 
@@ -57,33 +74,55 @@ public class MonthView extends FrameLayout {
     SparseArray<PeriodDay> messagesByDays = new SparseArray<>();
     SparseArray<ImageReceiver> imagesByDays = new SparseArray<>();
 
-    SparseArray<PeriodDay> animatedFromMessagesByDays = new SparseArray<>();
-    SparseArray<ImageReceiver> animatedFromImagesByDays = new SparseArray<>();
-
-    Paint blackoutPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    TextPaint activeTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint blackoutPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint textPaintBold = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint activeTextPaintWhite = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint selectedCyclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint selectedCycleStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint selectedRangePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     boolean attached;
-    float animationProgress = 1f;
     private Callback callback;
+    private final SparseArray<VisibleDay> visibleDays = new SparseArray<>();
+    private int selectedDateStart;
+    private int selectedDateEnd;
 
     public MonthView(Context context) {
         super(context);
         setWillNotDraw(false);
-        activeTextPaint.setTextSize(AndroidUtilities.dp(16));
-        activeTextPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-        activeTextPaint.setTextAlign(Paint.Align.CENTER);
-        activeTextPaint.setColor(Color.WHITE);
+        selectedCyclePaint.setColor(0xFF50A5E6);
+        selectedCycleStrokePaint.setColor(0xFF50A5E6);
+        selectedCycleStrokePaint.setStrokeWidth(AndroidUtilities.dp(2));
+        selectedCycleStrokePaint.setStyle(Paint.Style.STROKE);
+
+        selectedRangePaint.setColor(0x2650A5E6);
+
+        activeTextPaintWhite.setTextSize(AndroidUtilities.dp(16));
+        activeTextPaintWhite.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        activeTextPaintWhite.setTextAlign(Paint.Align.CENTER);
+        activeTextPaintWhite.setColor(Color.WHITE);
+
         textPaint.setTextSize(AndroidUtilities.dp(16));
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+
+        textPaintBold.setTextSize(AndroidUtilities.dp(16));
+        textPaintBold.setTextAlign(Paint.Align.CENTER);
+        textPaintBold.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        textPaintBold.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+
         titleView = new SimpleTextView(context);
         titleView.setTextSize(15);
         titleView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         titleView.setGravity(Gravity.CENTER);
         titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 28, 0, 0, 12, 0, 4));
+    }
+
+    public void setSelectedDates(int selectedDateStart, int selectedDateEnd) {
+        this.selectedDateStart = selectedDateStart;
+        this.selectedDateEnd = selectedDateEnd;
     }
 
     public void setCallback(Callback callback) {
@@ -172,6 +211,18 @@ public class MonthView extends FrameLayout {
         cellCount = (int) (totalColumns / 7f) + (totalColumns % 7 == 0 ? 0 : 1);
         calendar.set(year, monthInYear + 1, 0);
         titleView.setText(LocaleController.formatYearMont(calendar.getTimeInMillis() / 1000, true));
+        visibleDays.clear();
+        for (int i = 0; i < daysInMonth; i++) {
+            calendar.set(year, monthInYear, i + 1);
+            calendar.set(Calendar.HOUR_OF_DAY, 0);
+            calendar.set(Calendar.MINUTE, 0);
+            calendar.set(Calendar.SECOND, 0);
+            calendar.set(Calendar.MILLISECOND, 0);
+            VisibleDay visibleDay = new VisibleDay();
+            visibleDay.date = (int) (calendar.getTimeInMillis() / 1000);
+            visibleDay.dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+            visibleDays.put(i, visibleDay);
+        }
     }
 
     @Override
@@ -183,41 +234,80 @@ public class MonthView extends FrameLayout {
     float pressedX;
     float pressedY;
 
+    private Runnable longPressRunnable;
+
+    private void cleanLongPressRunnable() {
+        if (longPressRunnable != null) {
+            removeCallbacks(longPressRunnable);
+            longPressRunnable = null;
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            cleanLongPressRunnable();
             pressed = true;
             pressedX = event.getX();
             pressedY = event.getY();
-        } else if (event.getAction() == MotionEvent.ACTION_UP) {
-            if (pressed) {
-                for (int i = 0; i < imagesByDays.size(); i++) {
-                    if (imagesByDays.valueAt(i).getDrawRegion().contains(pressedX, pressedY)) {
-                        //if (callback != null) {
-                        PeriodDay periodDay = messagesByDays.valueAt(i);
-                        //prepareBlurBitmap();
-                        Bundle args = new Bundle();
-                        //todo только личная переписка
-                        //добавить блур
-                        /*args.putLong("chat_id", -dialogId);
-                        presentFragmentAsPreview(new ChatActivity(args));*/
-                        //callback.onDateSelected(periodDay.messageObject.getId(), periodDay.startOffset);
-                        //finishFragment();
-                        break;
-                        //}
+            longPressRunnable = () -> {
+                if (pressed && callback != null) {
+                    VisibleDay visibleDay = findVisibleDay();
+                    if (visibleDay != null && visibleDay.isAvailable) {
+                        callback.onLongPress(visibleDay.date);
                     }
+                }
+            };
+            postDelayed(longPressRunnable, ViewConfiguration.getLongPressTimeout() - ViewConfiguration.getTapTimeout());
+        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+            if (pressed && callback != null) {
+                PeriodDay periodDay = findPeriod();
+                if (periodDay != null) {
+                    callback.onClick(periodDay);
+                }
+                VisibleDay visibleDay = findVisibleDay();
+                if (visibleDay != null && visibleDay.isAvailable) {
+                    callback.onSelectDate(visibleDay.date);
                 }
             }
             pressed = false;
         } else if (event.getAction() == MotionEvent.ACTION_CANCEL) {
+            cleanLongPressRunnable();
             pressed = false;
         }
         return pressed;
     }
 
+    private PeriodDay findPeriod() {
+        if (imagesByDays != null) {
+            for (int i = 0; i < imagesByDays.size(); i++) {
+                if (imagesByDays.valueAt(i).getDrawRegion().contains(pressedX, pressedY)) {
+                    return messagesByDays.valueAt(i);
+                }
+            }
+        }
+        return null;
+    }
+
+    private VisibleDay findVisibleDay() {
+        for (int i = 0; i < visibleDays.size(); i++) {
+            if (visibleDays.get(i).drawRegion.contains(pressedX, pressedY)) {
+                return visibleDays.get(i);
+            }
+        }
+        return null;
+    }
+
+    private final Path tmpPath = new Path();
+    private final RectF tmpRectF = new RectF();
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+        float cycleSize = AndroidUtilities.dp(44);
+        float cycleRadius = cycleSize / 2f;
 
         int currentCell = 0;
         int currentColumn = startDayOfWeek;
@@ -227,67 +317,137 @@ public class MonthView extends FrameLayout {
         for (int i = 0; i < daysInMonth; i++) {
             float cx = xStep * currentColumn + xStep / 2f;
             float cy = yStep * currentCell + yStep / 2f + AndroidUtilities.dp(44);
+            visibleDays.get(i).drawRegion.set(cx - AndroidUtilities.dp(44) / 2f, cy - AndroidUtilities.dp(44) / 2f, cx + AndroidUtilities.dp(44) / 2f, cy + AndroidUtilities.dp(44) / 2f);
+
+            final int currentDay = visibleDays.get(i).date;
+            final boolean isSelectedStartOrEnd = (selectedDateStart != 0 && selectedDateStart == currentDay) || (selectedDateEnd != 0 && selectedDateEnd == currentDay);
+            final boolean isSelectedBetweenDays = (selectedDateStart != 0 && selectedDateEnd != 0) && (currentDay > selectedDateStart && currentDay < selectedDateEnd);
+
+            final float innerCycleRadius = cycleRadius - AndroidUtilities.dp(4);
+            float scaleFactor = 1f;
+
+            if (isSelectedStartOrEnd || isSelectedBetweenDays) {
+                scaleFactor = innerCycleRadius / cycleRadius;
+            }
+
+            if (isSelectedStartOrEnd) {
+                RectF drawRegion = visibleDays.get(i).drawRegion;
+                canvas.drawCircle(cx, cy, innerCycleRadius, selectedCyclePaint);
+                canvas.drawCircle(cx, cy, cycleRadius - AndroidUtilities.dp(1), selectedCycleStrokePaint);
+                if (selectedDateStart != 0 && selectedDateEnd != 0) {
+                    int dayOfWeek = visibleDays.get(i).dayOfWeek;
+                    if (selectedDateStart == currentDay) {
+                        //справа
+                        if (dayOfWeek != 1) {
+                            tmpPath.moveTo(cx + xStep / 2f, drawRegion.bottom);
+                            tmpPath.lineTo(cx + xStep / 2f, drawRegion.top);
+                            tmpPath.lineTo(cx, drawRegion.top);
+                            tmpRectF.set(drawRegion.left, drawRegion.top, drawRegion.right, drawRegion.bottom);
+                            tmpPath.arcTo(tmpRectF, -90, 180, false);
+                            tmpPath.close();
+                            canvas.drawPath(tmpPath, selectedRangePaint);
+                        }
+                    } else {
+                        //слева
+                        if (dayOfWeek != 2) {
+                            tmpPath.moveTo(cx - xStep / 2f, drawRegion.bottom);
+                            tmpPath.lineTo(cx - xStep / 2f, drawRegion.top);
+                            tmpPath.lineTo(cx, drawRegion.top);
+                            tmpRectF.set(drawRegion.left, drawRegion.top, drawRegion.right, drawRegion.bottom);
+                            tmpPath.arcTo(tmpRectF, -90, -180, false);
+                            tmpPath.close();
+                            canvas.drawPath(tmpPath, selectedRangePaint);
+                        }
+                    }
+                }
+                tmpPath.reset();
+            } else if (isSelectedBetweenDays) {
+                RectF drawRegion = visibleDays.get(i).drawRegion;
+                int dayOfWeek = visibleDays.get(i).dayOfWeek;
+                if (dayOfWeek == 1) {
+                    //вс
+                    canvas.drawArc(visibleDays.get(i).drawRegion, -90, 180, true, selectedRangePaint);
+                    canvas.drawRect(cx - xStep / 2f, drawRegion.top, cx, drawRegion.bottom, selectedRangePaint);
+                } else if (dayOfWeek == 2) {
+                    //пн
+                    canvas.drawArc(drawRegion, 90, 180, true, selectedRangePaint);
+                    canvas.drawRect(cx, drawRegion.top, cx + xStep / 2f, drawRegion.bottom, selectedRangePaint);
+                } else {
+                    canvas.drawRect(cx - xStep / 2f, drawRegion.top, cx + xStep / 2f, drawRegion.bottom, selectedRangePaint);
+                }
+            }
+
             int nowTime = (int) (System.currentTimeMillis() / 1000L);
             if (nowTime < startMonthTime + (i + 1) * 86400) {
                 int oldAlpha = textPaint.getAlpha();
                 textPaint.setAlpha((int) (oldAlpha * 0.3f));
                 canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), textPaint);
                 textPaint.setAlpha(oldAlpha);
-            } else if (messagesByDays != null && messagesByDays.get(i, null) != null) {
-                float alpha = 1f;
-                if (imagesByDays.get(i) != null) {
-                    if (callback.onCheckEnterItems() && !messagesByDays.get(i).wasDrawn) {
-                        messagesByDays.get(i).enterAlpha = 0f;
-                        messagesByDays.get(i).startEnterDelay = (cy + getY()) / callback.getListViewHeight() * 150;
-                    }
-                    if (messagesByDays.get(i).startEnterDelay > 0) {
-                        messagesByDays.get(i).startEnterDelay -= 16;
-                        if (messagesByDays.get(i).startEnterDelay < 0) {
-                            messagesByDays.get(i).startEnterDelay = 0;
-                        } else {
-                            invalidate();
-                        }
-                    }
-                    if (messagesByDays.get(i).startEnterDelay == 0 && messagesByDays.get(i).enterAlpha != 1f) {
-                        messagesByDays.get(i).enterAlpha += 16 / 220f;
-                        if (messagesByDays.get(i).enterAlpha > 1f) {
-                            messagesByDays.get(i).enterAlpha = 1f;
-                        } else {
-                            invalidate();
-                        }
-                    }
-                    alpha = messagesByDays.get(i).enterAlpha;
-                    if (alpha != 1f) {
-                        canvas.save();
-                        float s = 0.8f + 0.2f * alpha;
-                        canvas.scale(s, s, cx, cy);
-                    }
-                    imagesByDays.get(i).setAlpha(messagesByDays.get(i).enterAlpha);
-                    imagesByDays.get(i).setImageCoords(cx - AndroidUtilities.dp(44) / 2f, cy - AndroidUtilities.dp(44) / 2f, AndroidUtilities.dp(44), AndroidUtilities.dp(44));
-                    imagesByDays.get(i).draw(canvas);
-                    blackoutPaint.setColor(ColorUtils.setAlphaComponent(Color.BLACK, (int) (messagesByDays.get(i).enterAlpha * 80)));
-                    canvas.drawCircle(cx, cy, AndroidUtilities.dp(44) / 2f, blackoutPaint);
-                    messagesByDays.get(i).wasDrawn = true;
-                    if (alpha != 1f) {
-                        canvas.restore();
-                    }
-                }
-                if (alpha != 1f) {
-                    int oldAlpha = textPaint.getAlpha();
-                    textPaint.setAlpha((int) (oldAlpha * (1f - alpha)));
-                    canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), textPaint);
-                    textPaint.setAlpha(oldAlpha);
-
-                    oldAlpha = textPaint.getAlpha();
-                    activeTextPaint.setAlpha((int) (oldAlpha * alpha));
-                    canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), activeTextPaint);
-                    activeTextPaint.setAlpha(oldAlpha);
-                } else {
-                    canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), activeTextPaint);
-                }
-
+                visibleDays.get(i).isAvailable = false;
             } else {
-                canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), textPaint);
+                visibleDays.get(i).isAvailable = true;
+                if (messagesByDays != null && messagesByDays.get(i, null) != null) {
+                    float alpha = 1f;
+                    if (imagesByDays.get(i) != null) {
+                        if (callback.onCheckEnterItems() && !messagesByDays.get(i).wasDrawn) {
+                            messagesByDays.get(i).enterAlpha = 0f;
+                            messagesByDays.get(i).startEnterDelay = (cy + getY()) / callback.getListViewHeight() * 150;
+                        }
+                        if (messagesByDays.get(i).startEnterDelay > 0) {
+                            messagesByDays.get(i).startEnterDelay -= 16;
+                            if (messagesByDays.get(i).startEnterDelay < 0) {
+                                messagesByDays.get(i).startEnterDelay = 0;
+                            } else {
+                                invalidate();
+                            }
+                        }
+                        if (messagesByDays.get(i).startEnterDelay == 0 && messagesByDays.get(i).enterAlpha != 1f) {
+                            messagesByDays.get(i).enterAlpha += 16 / 220f;
+                            if (messagesByDays.get(i).enterAlpha > 1f) {
+                                messagesByDays.get(i).enterAlpha = 1f;
+                            } else {
+                                invalidate();
+                            }
+                        }
+                        alpha = messagesByDays.get(i).enterAlpha;
+                        if (alpha != 1f || isSelectedStartOrEnd || isSelectedBetweenDays) {
+                            canvas.save();
+                            float s = 0.8f + 0.2f * alpha;
+                            s = s * scaleFactor;
+                            canvas.scale(s, s, cx, cy);
+                        }
+                        imagesByDays.get(i).setAlpha(messagesByDays.get(i).enterAlpha);
+                        imagesByDays.get(i).setImageCoords(cx - AndroidUtilities.dp(44) / 2f, cy - AndroidUtilities.dp(44) / 2f, AndroidUtilities.dp(44), AndroidUtilities.dp(44));
+                        imagesByDays.get(i).draw(canvas);
+                        blackoutPaint.setColor(ColorUtils.setAlphaComponent(Color.BLACK, (int) (messagesByDays.get(i).enterAlpha * 80)));
+                        canvas.drawCircle(cx, cy, AndroidUtilities.dp(44) / 2f, blackoutPaint);
+                        messagesByDays.get(i).wasDrawn = true;
+                        if (alpha != 1f || isSelectedStartOrEnd || isSelectedBetweenDays) {
+                            canvas.restore();
+                        }
+                    }
+                    if (alpha != 1f) {
+                        int oldAlpha = textPaint.getAlpha();
+                        textPaint.setAlpha((int) (oldAlpha * (1f - alpha)));
+                        canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), textPaint);
+                        textPaint.setAlpha(oldAlpha);
+
+                        oldAlpha = textPaint.getAlpha();
+                        activeTextPaintWhite.setAlpha((int) (oldAlpha * alpha));
+                        canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), activeTextPaintWhite);
+                        activeTextPaintWhite.setAlpha(oldAlpha);
+                    } else {
+                        canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), activeTextPaintWhite);
+                    }
+                } else {
+                    if (isSelectedStartOrEnd) {
+                        canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), activeTextPaintWhite);
+                    } else if (isSelectedBetweenDays) {
+                        canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), textPaintBold);
+                    } else {
+                        canvas.drawText(Integer.toString(i + 1), cx, cy + AndroidUtilities.dp(5), textPaint);
+                    }
+                }
             }
 
             currentColumn++;

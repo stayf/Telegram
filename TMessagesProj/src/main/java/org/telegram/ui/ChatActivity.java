@@ -219,7 +219,6 @@ import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.ReportAlert;
 import org.telegram.ui.Components.SearchCounterView;
 import org.telegram.ui.Components.ShareAlert;
-import org.telegram.ui.Components.SharedMediaLayout;
 import org.telegram.ui.Components.Size;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
 import org.telegram.ui.Components.StickersAlert;
@@ -594,6 +593,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
     private boolean showScrollToMessageError;
     private int startLoadFromMessageId;
+    private int startLoadFromDate;
     private int startLoadFromMessageIdSaved;
     private int startLoadFromMessageOffset = Integer.MAX_VALUE;
     private int startFromVideoTimestamp = -1;
@@ -1301,12 +1301,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             if (view instanceof ChatActionCell) {
                 ChatActionCell cell = ((ChatActionCell) view);
                 MessageObject messageObject = cell.getMessageObject();
-                if (messageObject.isDateObject) {
+                if (messageObject.isDateObject && DialogObject.isUserDialog(dialog_id)) {
                     int date = messageObject.messageOwner.date;
-                    Bundle bundle = new Bundle();
-                    bundle.putLong("dialog_id", dialog_id);
-                    MediaCalendarActivity calendarActivity = new MediaCalendarActivity(bundle, SharedMediaLayout.FILTER_PHOTOS_AND_VIDEOS, date);
-                    presentFragment(calendarActivity);
+                    presentFragment(MediaCalendarActivity.createDeleteDaysMode(dialog_id, date));
                     return;
                 }
             }
@@ -1353,6 +1350,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         inlineReturn = arguments.getLong("inline_return", 0);
         String inlineQuery = arguments.getString("inline_query");
         startLoadFromMessageId = arguments.getInt("message_id", 0);
+        startLoadFromDate = arguments.getInt("start_load_date", 0);
         startFromVideoTimestamp = arguments.getInt("video_timestamp", -1);
         threadUnreadMessagesCount = arguments.getInt("unread_count", 0);
         if (startFromVideoTimestamp >= 0) {
@@ -5357,12 +5355,13 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
             calendar.clear();
             calendar.set(year, monthOfYear, dayOfMonth);
-
             int date = (int) (calendar.getTime().getTime() / 1000);
-            Bundle bundle = new Bundle();
-            bundle.putLong("dialog_id", dialog_id);
-            MediaCalendarActivity calendarActivity = new MediaCalendarActivity(bundle, SharedMediaLayout.FILTER_PHOTOS_AND_VIDEOS, date);
-            presentFragment(calendarActivity);
+
+            if (DialogObject.isUserDialog(dialog_id)) {
+                presentFragment(MediaCalendarActivity.createDeleteDaysMode(dialog_id, date));
+            } else {
+                jumpToDate(date);
+            }
         });
 
         if (currentChat != null) {
@@ -10991,6 +10990,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         loadingForward = false;
         waitingForReplyMessageLoad = false;
         startLoadFromMessageId = 0;
+        startLoadFromDate = 0;
         showScrollToMessageError = false;
         last_message_id = 0;
         unreadMessageObject = null;
@@ -14025,6 +14025,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
             }
             chatWasReset = false;
+            //todo нужно подобрать правильное место
+            if (startLoadFromDate != 0) {
+                jumpToDate(startLoadFromDate);
+                startLoadFromDate = 0;
+            }
         } else if (id == NotificationCenter.invalidateMotionBackground) {
             if (chatListView != null) {
                 chatListView.invalidateViews();

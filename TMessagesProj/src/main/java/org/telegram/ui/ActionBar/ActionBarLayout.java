@@ -27,8 +27,6 @@ import android.os.Build;
 
 import androidx.annotation.Keep;
 
-import android.os.SystemClock;
-
 import androidx.core.graphics.ColorUtils;
 import androidx.core.math.MathUtils;
 
@@ -44,11 +42,9 @@ import android.view.ViewOutlineProvider;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
-
-import com.google.android.exoplayer2.util.Log;
+import android.widget.LinearLayout;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
@@ -57,6 +53,7 @@ import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.GroupCallPip;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.MediaCalendarActivity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -191,6 +188,24 @@ public class ActionBarLayout extends FrameLayout {
 
         @Override
         public boolean dispatchTouchEvent(MotionEvent ev) {
+            if (inPreviewModeWithMenu) {
+                try {
+                    if (containerView != null) {
+                        FrameLayout frameLayout = (FrameLayout) containerView.getChildAt(containerView.getChildCount() - 1);
+                        LinearLayout linearLayout = (LinearLayout) frameLayout.getChildAt(0);
+                        View preview = linearLayout.getChildAt(0);
+                        Rect rect = new Rect();
+                        preview.getLocalVisibleRect(rect);
+                        if (rect.contains((int) ev.getX(), (int) ev.getY())) {
+                            frameLayout.onTouchEvent(ev);
+                            return true;
+                        }
+                    }
+                    return super.dispatchTouchEvent(ev);
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
+            }
             if ((inPreviewMode || transitionAnimationPreviewMode) && (ev.getActionMasked() == MotionEvent.ACTION_DOWN || ev.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN)) {
                 return false;
             }
@@ -258,6 +273,7 @@ public class ActionBarLayout extends FrameLayout {
     private boolean inBubbleMode;
 
     private boolean inPreviewMode;
+    private boolean inPreviewModeWithMenu;
     private boolean previewOpenAnimationInProgress;
     private ColorDrawable previewBackgroundDrawable;
 
@@ -463,6 +479,9 @@ public class ActionBarLayout extends FrameLayout {
     }
 
     public void onPause() {
+        if(inPreviewModeWithMenu) {
+            finishPreviewFragment();
+        }
         if (!fragmentsStack.isEmpty()) {
             BaseFragment lastFragment = fragmentsStack.get(fragmentsStack.size() - 1);
             lastFragment.onPause();
@@ -580,10 +599,12 @@ public class ActionBarLayout extends FrameLayout {
         if (view != null) {
             previewBackgroundDrawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
             previewBackgroundDrawable.draw(canvas);
-            int x = (getMeasuredWidth() - AndroidUtilities.dp(24)) / 2;
-            int y = (int) (view.getTop() + containerView.getTranslationY() - AndroidUtilities.dp(12 + (Build.VERSION.SDK_INT < 21 ? 20 : 0)));
-            Theme.moveUpDrawable.setBounds(x, y, x + AndroidUtilities.dp(24), y + AndroidUtilities.dp(24));
-            Theme.moveUpDrawable.draw(canvas);
+            if (!inPreviewModeWithMenu) {
+                int x = (getMeasuredWidth() - AndroidUtilities.dp(24)) / 2;
+                int y = (int) (view.getTop() + containerView.getTranslationY() - AndroidUtilities.dp(12 + (Build.VERSION.SDK_INT < 21 ? 20 : 0)));
+                Theme.moveUpDrawable.setBounds(x, y, x + AndroidUtilities.dp(24), y + AndroidUtilities.dp(24));
+                Theme.moveUpDrawable.draw(canvas);
+            }
         }
     }
 
@@ -1038,6 +1059,233 @@ public class ActionBarLayout extends FrameLayout {
         return inPreviewMode || transitionAnimationPreviewMode;
     }
 
+    public boolean presentFragmentAsPreviewWithMenu(BaseFragment fragment) {
+        final boolean removeLast = false;
+        final boolean forceWithoutAnimation = false;
+        final boolean check = true;
+        final boolean preview = true;
+        if (fragment == null || checkTransitionAnimation() || delegate != null && check && !delegate.needPresentFragment(fragment, removeLast, forceWithoutAnimation, this) || !fragment.onFragmentCreate()) {
+            return false;
+        }
+        fragment.setInPreviewMode(preview);
+
+        final BaseFragment currentFragment = !fragmentsStack.isEmpty() ? fragmentsStack.get(fragmentsStack.size() - 1) : null;
+
+        fragment.setParentLayout(this);
+        View fragmentView = fragment.fragmentView;
+        if (fragmentView == null) {
+            fragmentView = fragment.createView(parentActivity);
+        } else {
+            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            if (parent != null) {
+                fragment.onRemoveFromParent();
+                parent.removeView(fragmentView);
+            }
+        }
+
+        ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout = new ActionBarPopupWindow.ActionBarPopupWindowLayout(fragmentView.getContext());
+        popupLayout.setMinimumWidth(AndroidUtilities.dp(200));
+        Rect backgroundPaddings = new Rect();
+        Drawable shadowDrawable = fragmentView.getResources().getDrawable(R.drawable.popup_fixed_alert2).mutate();
+        shadowDrawable.getPadding(backgroundPaddings);
+        popupLayout.setBackgroundColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground));
+
+        ArrayList<Integer> icons = new ArrayList<>();
+        ArrayList<CharSequence> items = new ArrayList<>();
+        final ArrayList<Integer> options = new ArrayList<>();
+        items.add("Jump to Date");
+        options.add(1);
+        icons.add(R.drawable.msg_message);
+        items.add("Select this day");
+        options.add(2);
+        icons.add(R.drawable.msg_select);
+        items.add("Clear history");
+        options.add(3);
+        icons.add(R.drawable.msg_delete);
+
+        for (int a = 0, N = items.size(); a < N; a++) {
+            ActionBarMenuSubItem cell = new ActionBarMenuSubItem(fragmentView.getContext(), a == 0, a == N - 1);
+            cell.setMinimumWidth(AndroidUtilities.dp(200));
+            cell.setTextAndIcon(items.get(a), icons.get(a));
+            final int option = options.get(a);
+            final int date = fragment.getArguments().getInt("load_date", 0);
+            cell.setOnClickListener(v -> {
+                if (option == 1) {
+                    previewOpenAnimationInProgress = true;
+                    inPreviewMode = false;
+                    inPreviewModeWithMenu = false;
+
+                    BaseFragment prevFr = fragmentsStack.get(fragmentsStack.size() - 2);
+                    BaseFragment prevFr2 = fragmentsStack.get(fragmentsStack.size() - 3);
+                    BaseFragment fr = fragmentsStack.get(fragmentsStack.size() - 1);
+
+                    if (Build.VERSION.SDK_INT >= 21) {
+                        fr.fragmentView.setOutlineProvider(null);
+                        fr.fragmentView.setClipToOutline(false);
+                    }
+
+                    LinearLayout parentLiner = (LinearLayout) fr.fragmentView.getParent();
+                    if (parentLiner != null) {
+                        parentLiner.removeAllViews();
+                        FrameLayout parentWrap = (FrameLayout) parentLiner.getParent().getParent();
+                        if (parentWrap != null) {
+                            parentWrap.removeAllViews();
+                            parentWrap.addView(fr.fragmentView);
+                        }
+                    }
+
+                    FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) fr.fragmentView.getLayoutParams();
+                    layoutParams.topMargin = layoutParams.bottomMargin = layoutParams.rightMargin = layoutParams.leftMargin = 0;
+                    layoutParams.height = LayoutHelper.MATCH_PARENT;
+                    layoutParams.width = LayoutHelper.MATCH_PARENT;
+                    fr.fragmentView.setLayoutParams(layoutParams);
+
+                    presentFragmentInternalRemoveOld(true, prevFr);
+                    presentFragmentInternalRemoveOld(true, prevFr2);
+
+                    AnimatorSet animatorSet = new AnimatorSet();
+                    animatorSet.playTogether(
+                            ObjectAnimator.ofFloat(fr.fragmentView, View.SCALE_X, 1.0f, 1.05f, 1.0f),
+                            ObjectAnimator.ofFloat(fr.fragmentView, View.SCALE_Y, 1.0f, 1.05f, 1.0f));
+                    animatorSet.setDuration(200);
+                    animatorSet.setInterpolator(new CubicBezierInterpolator(0.42, 0.0, 0.58, 1.0));
+                    animatorSet.addListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            previewOpenAnimationInProgress = false;
+                            fr.onPreviewOpenAnimationEnd();
+                        }
+                    });
+                    animatorSet.start();
+
+                    fr.setInPreviewMode(false);
+                } else {
+                    BaseFragment prevFr = fragmentsStack.get(fragmentsStack.size() - 2);
+                    if (prevFr instanceof MediaCalendarActivity) {
+                        if (option == 2) {
+                            ((MediaCalendarActivity) prevFr).selectDayFromMenu(date);
+                        }
+                        if (option == 3) {
+                            ((MediaCalendarActivity) prevFr).cleanHistoryFromMenu(date);
+                        }
+                    }
+                    finishPreviewFragment();
+                }
+            });
+            popupLayout.addView(cell);
+        }
+
+        final FrameLayout wrapLayer = new FrameLayout(fragmentView.getContext());
+        final LinearLayout subLinerLayer = new LinearLayout(fragmentView.getContext());
+        subLinerLayer.setOrientation(LinearLayout.VERTICAL);
+        subLinerLayer.addView(fragmentView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        subLinerLayer.addView(popupLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+        wrapLayer.addView(subLinerLayer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+        wrapLayer.setOnClickListener(v -> {
+            finishPreviewFragment();
+        });
+        ((LinearLayout.LayoutParams) fragmentView.getLayoutParams()).weight = 1;
+        ((LinearLayout.LayoutParams) popupLayout.getLayoutParams()).topMargin = AndroidUtilities.dp(0);
+        ((LinearLayout.LayoutParams) popupLayout.getLayoutParams()).leftMargin = -backgroundPaddings.left;
+
+        if (Build.VERSION.SDK_INT >= 21) {
+            fragmentView.setOutlineProvider(new ViewOutlineProvider() {
+                @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+                @Override
+                public void getOutline(View view, Outline outline) {
+                    outline.setRoundRect(0, AndroidUtilities.statusBarHeight, view.getMeasuredWidth(), view.getMeasuredHeight(), AndroidUtilities.dp(6));
+                }
+            });
+            fragmentView.setClipToOutline(true);
+            fragmentView.setElevation(AndroidUtilities.dp(1));
+        }
+
+        fragmentView = wrapLayer;
+
+        containerViewBack.addView(fragmentView);
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) fragmentView.getLayoutParams();
+        layoutParams.width = LayoutHelper.MATCH_PARENT;
+        layoutParams.height = LayoutHelper.MATCH_PARENT;
+        layoutParams.topMargin = AndroidUtilities.dp(8);
+        layoutParams.bottomMargin = 0;
+        layoutParams.rightMargin = layoutParams.leftMargin = AndroidUtilities.dp(8);
+        fragmentView.setLayoutParams(layoutParams);
+
+        fragmentsStack.add(fragment);
+        fragment.onResume();
+        currentActionBar = fragment.actionBar;
+
+        LayoutContainer temp = containerView;
+        containerView = containerViewBack;
+        containerViewBack = temp;
+        containerView.setVisibility(View.VISIBLE);
+        setInnerTranslationX(0);
+        containerView.setTranslationY(0);
+
+        if (previewBackgroundDrawable == null) {
+            previewBackgroundDrawable = new ColorDrawable(0x2e000000);
+        }
+        previewBackgroundDrawable.setAlpha(0);
+        Theme.moveUpDrawable.setAlpha(0);
+
+        bringChildToFront(containerView);
+
+        transitionAnimationPreviewMode = preview;
+        inPreviewModeWithMenu = true;
+        transitionAnimationStartTime = System.currentTimeMillis();
+        transitionAnimationInProgress = true;
+        layoutToIgnore = containerView;
+        onOpenAnimationEndRunnable = () -> {
+            inPreviewMode = true;
+            inPreviewModeWithMenu = true;
+            transitionAnimationPreviewMode = false;
+            containerView.setScaleX(1.0f);
+            containerView.setScaleY(1.0f);
+
+            if (currentFragment != null) {
+                currentFragment.onTransitionAnimationEnd(false, false);
+            }
+            fragment.onTransitionAnimationEnd(true, false);
+            fragment.onBecomeFullyVisible();
+        };
+        boolean noDelay;
+        if (noDelay = !fragment.needDelayOpenAnimation()) {
+            if (currentFragment != null) {
+                currentFragment.onTransitionAnimationStart(false, false);
+            }
+            fragment.onTransitionAnimationStart(true, false);
+        }
+
+        delayedAnimationResumed = false;
+        oldFragment = currentFragment;
+        newFragment = fragment;
+
+        containerView.setAlpha(0.0f);
+        containerView.setTranslationX(0.0f);
+        containerView.setScaleX(0.9f);
+        containerView.setScaleY(0.9f);
+
+        if (fragment.needDelayOpenAnimation()) {
+            delayedOpenAnimationRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (delayedOpenAnimationRunnable != this) {
+                        return;
+                    }
+                    delayedOpenAnimationRunnable = null;
+                    fragment.onTransitionAnimationStart(true, false);
+                    startLayoutAnimation(true, true, preview);
+                }
+            };
+            AndroidUtilities.runOnUIThread(delayedOpenAnimationRunnable, 200);
+        } else {
+            startLayoutAnimation(true, true, preview);
+        }
+
+        return true;
+    }
+
     public boolean presentFragment(final BaseFragment fragment, final boolean removeLast, boolean forceWithoutAnimation, boolean check, final boolean preview) {
         if (fragment == null || checkTransitionAnimation() || delegate != null && check && !delegate.needPresentFragment(fragment, removeLast, forceWithoutAnimation, this) || !fragment.onFragmentCreate()) {
             return false;
@@ -1179,6 +1427,7 @@ public class ActionBarLayout extends FrameLayout {
                 onOpenAnimationEndRunnable = () -> {
                     if (preview) {
                         inPreviewMode = true;
+                        inPreviewModeWithMenu = false;
                         transitionAnimationPreviewMode = false;
                         containerView.setScaleX(1.0f);
                         containerView.setScaleY(1.0f);
@@ -1356,6 +1605,7 @@ public class ActionBarLayout extends FrameLayout {
         } else if (nextTranslation < -AndroidUtilities.dp(60)) {
             previewOpenAnimationInProgress = true;
             inPreviewMode = false;
+            inPreviewModeWithMenu = false;
             nextTranslation = 0;
 
             BaseFragment prevFragment = fragmentsStack.get(fragmentsStack.size() - 2);
@@ -1491,6 +1741,17 @@ public class ActionBarLayout extends FrameLayout {
                         containerViewBack.setScaleY(1.0f);
                         inPreviewMode = false;
                         transitionAnimationPreviewMode = false;
+                        if (inPreviewModeWithMenu) {
+                            LinearLayout parentLiner = (LinearLayout) currentFragment.fragmentView.getParent();
+                            if (parentLiner != null) {
+                                parentLiner.removeAllViews();
+                                FrameLayout parentWrap = (FrameLayout) parentLiner.getParent().getParent();
+                                if (parentWrap != null) {
+                                    parentWrap.removeAllViews();
+                                }
+                            }
+                        }
+                        inPreviewModeWithMenu = false;
                     } else {
                         containerViewBack.setTranslationX(0);
                     }

@@ -21,6 +21,7 @@ import android.text.TextPaint;
 import android.view.View;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.LocaleController;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -40,7 +41,7 @@ public class NumberTextView extends View {
     private float textWidth;
     private float oldTextWidth;
     private String zeroText;
-    private String suffixText;
+    private boolean daysSuffixText;
 
     public NumberTextView(Context context) {
         super(context);
@@ -50,8 +51,8 @@ public class NumberTextView extends View {
         zeroText = text;
     }
 
-    public void setSuffix(String text) {
-        suffixText = text;
+    public void withDaysSuffix() {
+        daysSuffixText = true;
     }
 
     @Keep
@@ -97,8 +98,8 @@ public class NumberTextView extends View {
         }
         if (number == 0 && zeroText != null) {
             text = zeroText;
-        } else if (suffixText != null) {
-            text += suffixText;
+        } else if (daysSuffixText) {
+            text = LocaleController.formatPluralString("Days", number);
         }
         boolean replace = false;
         if (center) {

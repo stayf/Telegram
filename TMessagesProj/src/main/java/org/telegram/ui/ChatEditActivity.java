@@ -1344,7 +1344,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             } else {
                 String type;
                 if (isChannel) {
-                    if (isPrivate && currentChat.noforwards) {
+                    if (ChatObject.isPrivateWithNoForwards(currentChat)) {
                         type = LocaleController.getString("TypePrivateRestricted", R.string.TypePrivateRestricted);
                     } else if (isPrivate) {
                         type = LocaleController.getString("TypePrivate", R.string.TypePrivate);
@@ -1352,7 +1352,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                         type = LocaleController.getString("TypePublic", R.string.TypePublic);
                     }
                 } else {
-                    if (isPrivate && currentChat.noforwards) {
+                    if (ChatObject.isPrivateWithNoForwards(currentChat)) {
                         type = LocaleController.getString("TypePrivateGroupRestricted", R.string.TypePrivateGroupRestricted);
                     } else if (isPrivate) {
                         type = LocaleController.getString("TypePrivateGroup", R.string.TypePrivateGroup);

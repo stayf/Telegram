@@ -9183,7 +9183,12 @@ public class MessagesController extends BaseController implements NotificationCe
         TLRPC.TL_messages_toggleNoForwards req = new TLRPC.TL_messages_toggleNoForwards();
         req.enabled = enabled;
         req.peer = getInputPeer(chat);
-        getConnectionsManager().sendRequest(req, null, ConnectionsManager.RequestFlagInvokeAfter);
+        getConnectionsManager().sendRequest(req, (response, error) -> {
+            if (error != null) {
+                return;
+            }
+            processUpdates((TLRPC.Updates) response, false);
+        }, ConnectionsManager.RequestFlagInvokeAfter);
     }
 
     public void sendBotStart(final TLRPC.User user, String botHash) {
