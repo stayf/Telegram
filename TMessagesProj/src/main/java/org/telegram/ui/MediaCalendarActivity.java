@@ -323,6 +323,8 @@ public class MediaCalendarActivity extends BaseFragment {
 
                             TLRPC.TL_messages_deleteHistory req = new TLRPC.TL_messages_deleteHistory();
                             req.peer = MessagesController.getInstance(currentAccount).getInputPeer(dialogId);
+                            req.flags |= 4;
+                            req.flags |= 8;
                             req.max_id = 0;
                             req.just_clear = false;
                             req.revoke = deleteForAll;

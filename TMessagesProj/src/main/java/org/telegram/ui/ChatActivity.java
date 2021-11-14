@@ -46,6 +46,8 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.provider.MediaStore;
@@ -673,6 +675,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             AndroidUtilities.runOnUIThread(updateDeleteItemRunnable, 1000);
         }
     };
+
+    private Handler handler = new Handler(Looper.getMainLooper());
 
     private ChatActivityDelegate chatActivityDelegate;
     private RecyclerAnimationScrollHelper chatScrollHelper;
@@ -1350,7 +1354,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         inlineReturn = arguments.getLong("inline_return", 0);
         String inlineQuery = arguments.getString("inline_query");
         startLoadFromMessageId = arguments.getInt("message_id", 0);
-        startLoadFromDate = arguments.getInt("start_load_date", 0);
+        startLoadFromDate = arguments.getInt("load_date", 0);
         startFromVideoTimestamp = arguments.getInt("video_timestamp", -1);
         threadUnreadMessagesCount = arguments.getInt("unread_count", 0);
         if (startFromVideoTimestamp >= 0) {
@@ -1748,6 +1752,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        handler.removeCallbacksAndMessages(null);
         if (chatActivityEnterView != null) {
             chatActivityEnterView.onDestroy();
         }
@@ -14025,11 +14030,16 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
             }
             chatWasReset = false;
-            //todo нужно подобрать правильное место
-            if (startLoadFromDate != 0) {
-                jumpToDate(startLoadFromDate);
-                startLoadFromDate = 0;
-            }
+            handler.postDelayed(() -> {
+                if (startLoadFromDate != 0) {
+                    try {
+                        jumpToDate(startLoadFromDate);
+                    } catch (Throwable e) {
+                        //ignore
+                    }
+                    startLoadFromDate = 0;
+                }
+            }, 600);
         } else if (id == NotificationCenter.invalidateMotionBackground) {
             if (chatListView != null) {
                 chatListView.invalidateViews();
