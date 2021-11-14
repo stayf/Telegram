@@ -1,6 +1,7 @@
 package org.telegram.ui.Components;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
@@ -10,6 +11,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -53,6 +55,7 @@ public class SendAsAlert {
     }
 
     private RecyclerListView listView;
+    private View headerShadowView;
     private TLRPC.Peer selectedPeer;
     private ArrayList<TLRPC.Peer> chats;
     private final int currentAccount = UserConfig.selectedAccount;
@@ -116,10 +119,11 @@ public class SendAsAlert {
         TextView textView = new TextView(context);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
         textView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-        containerLayout.addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, 16, 16, 16, 12));
+        containerLayout.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, 16, 16, 16, 12));
         textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
         textView.setText(LocaleController.getString("SendMessageAsTitle", R.string.SendMessageAsTitle));
 
+        FrameLayout frameLayout = new FrameLayout(context);
         listView = new RecyclerListView(context);
         listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         listView.setAdapter(new ListAdapter(context));
@@ -127,6 +131,16 @@ public class SendAsAlert {
         listView.setClipToPadding(false);
         listView.setEnabled(true);
         listView.setGlowColor(Theme.getColor(Theme.key_dialogScrollGlow));
+
+        Drawable headerShadowDrawable = ContextCompat.getDrawable(context, R.drawable.header_shadow).mutate();
+        headerShadowView = new View(context) {
+            @Override
+            protected void onDraw(Canvas canvas) {
+                super.onDraw(canvas);
+                headerShadowDrawable.setBounds(0, getMeasuredHeight() - AndroidUtilities.dp(2), getMeasuredWidth(), getMeasuredHeight());
+                headerShadowDrawable.draw(canvas);
+            }
+        };
 
         Drawable shadowDrawable3 = ContextCompat.getDrawable(context, R.drawable.popup_fixed_alert).mutate();
         shadowDrawable3.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), PorterDuff.Mode.MULTIPLY));
@@ -148,11 +162,34 @@ public class SendAsAlert {
             }
             accountInstance.getMessagesController().updateSendUs(dialogId, selectedPeer, () -> {
                 dismiss(false);
+            }, () -> {
+                dismiss(false);
                 clearCache();
             });
         });
 
-        containerLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        listView.setOnScrollListener(new RecyclerView.OnScrollListener() {
+            private int overallYScroll = 0;
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                overallYScroll = overallYScroll + dy;
+                if (overallYScroll > 1) {
+                    if (headerShadowView.getVisibility() != View.VISIBLE) {
+                        headerShadowView.setVisibility(View.VISIBLE);
+                    }
+                } else {
+                    if (headerShadowView.getVisibility() != View.INVISIBLE) {
+                        headerShadowView.setVisibility(View.INVISIBLE);
+                    }
+                }
+            }
+        });
+
+        frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        frameLayout.addView(headerShadowView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 2));
+        containerLayout.addView(frameLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         popupWindow = new ActionBarPopupWindow(containerLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
             @Override
@@ -162,7 +199,10 @@ public class SendAsAlert {
                     return;
                 }
                 popupWindow = null;
-                delegate.popupClosed(false);
+                if (delegate != null) {
+                    delegate.popupClosed(false);
+                    delegate = null;
+                }
             }
         };
         popupWindow.setPauseNotifications(false);
@@ -193,13 +233,18 @@ public class SendAsAlert {
         int textViewMeasuredHeight = (textView.getMeasuredHeight() + AndroidUtilities.dp(28));
         int containerMeasuredHeight = containerLayout.getMeasuredHeight();
         listView.getLayoutParams().height = containerMeasuredHeight - textViewMeasuredHeight;
+        popupWindow.setAnimationStyle(R.style.PopupContextAnimation2);
         popupWindow.showAtLocation(parent, Gravity.LEFT | Gravity.TOP, location[0] - AndroidUtilities.dp(10), location[1] - AndroidUtilities.dp(23) - containerMeasuredHeight);
-        delegate.popupOpened();
+        if (delegate != null) {
+            delegate.popupOpened();
+        }
     }
 
     public void dismiss(boolean force) {
         if (popupWindow != null && popupWindow.isShowing()) {
-            delegate.popupClosed(true);
+            if (delegate != null) {
+                delegate.popupClosed(true);
+            }
             popupWindow.dismiss(!force);
         }
     }

@@ -9156,13 +9156,14 @@ public class MessagesController extends BaseController implements NotificationCe
         }, ConnectionsManager.RequestFlagInvokeAfter);
     }
 
-    public void updateSendUs(long dialogId, TLRPC.Peer selectedPeer, Runnable errorCallback) {
+    public void updateSendUs(long dialogId, TLRPC.Peer selectedPeer, Runnable successCallback, Runnable errorCallback) {
         TLRPC.TL_messages_saveDefaultSendAs req = new TLRPC.TL_messages_saveDefaultSendAs();
         req.peer = getInputPeer(dialogId);
         req.send_as = getInputPeer(selectedPeer);
         getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
             if (response != null) {
                 if (response instanceof TLRPC.TL_boolTrue) {
+                    successCallback.run();
                     TLRPC.ChatFull chatFull = getChatFull(-dialogId);
                     if (chatFull != null) {
                         chatFull.default_send_as = selectedPeer;
