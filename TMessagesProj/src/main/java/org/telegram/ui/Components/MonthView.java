@@ -120,9 +120,12 @@ public class MonthView extends FrameLayout {
         addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 28, 0, 0, 12, 0, 4));
     }
 
+    public float selectRangeAnimationProgress;
+
     public void setSelectedDates(int selectedDateStart, int selectedDateEnd) {
         this.selectedDateStart = selectedDateStart;
         this.selectedDateEnd = selectedDateEnd;
+        selectRangeAnimationProgress = 0;
     }
 
     public void setCallback(Callback callback) {
@@ -314,6 +317,7 @@ public class MonthView extends FrameLayout {
 
         float xStep = getMeasuredWidth() / 7f;
         float yStep = AndroidUtilities.dp(44 + 8);
+
         for (int i = 0; i < daysInMonth; i++) {
             float cx = xStep * currentColumn + xStep / 2f;
             float cy = yStep * currentCell + yStep / 2f + AndroidUtilities.dp(44);
@@ -330,6 +334,7 @@ public class MonthView extends FrameLayout {
                 scaleFactor = innerCycleRadius / cycleRadius;
             }
 
+            selectedRangePaint.setAlpha((int) (selectRangeAnimationProgress * 41));
             if (isSelectedStartOrEnd) {
                 RectF drawRegion = visibleDays.get(i).drawRegion;
                 canvas.drawCircle(cx, cy, innerCycleRadius, selectedCyclePaint);
@@ -454,6 +459,14 @@ public class MonthView extends FrameLayout {
             if (currentColumn >= 7) {
                 currentColumn = 0;
                 currentCell++;
+            }
+        }
+        if (selectedDateStart != 0 && selectedDateEnd != 0) {
+            selectRangeAnimationProgress += 0.1f;
+            if (selectRangeAnimationProgress > 1f) {
+                selectRangeAnimationProgress = 1f;
+            } else {
+                invalidate();
             }
         }
     }
