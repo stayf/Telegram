@@ -499,13 +499,14 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
                 donePressed = false;
                 return;
             } else {
-                getMessagesController().updateChannelUserName(chatId, newUserName);
+                //перегружаем, чтобы получить актуальный default_send_as
+                getMessagesController().updateChannelUserNameWithRestrictContent(chatId, newUserName, isPrivate && currentChat.noforwards != isNoForwards, isNoForwards);
                 currentChat.username = newUserName;
             }
-        }
-
-        if (isPrivate && currentChat.noforwards != isNoForwards) {
-            getMessagesController().updateRestrictContent(currentChat, isNoForwards);
+        } else {
+            if (isPrivate && currentChat.noforwards != isNoForwards) {
+                getMessagesController().updateRestrictContent(currentChat, isNoForwards);
+            }
         }
 
         finishFragment();

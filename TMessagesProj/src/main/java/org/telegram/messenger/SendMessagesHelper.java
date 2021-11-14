@@ -3659,6 +3659,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     reqSend.peer = sendToPeer;
                     reqSend.random_id = newMsg.random_id;
                     reqSend.send_as = sendAsPeer;
+
                     if (newMsg.reply_to != null && newMsg.reply_to.reply_to_msg_id != 0) {
                         reqSend.flags |= 1;
                         reqSend.reply_to_msg_id = newMsg.reply_to.reply_to_msg_id;

@@ -9156,6 +9156,38 @@ public class MessagesController extends BaseController implements NotificationCe
         }, ConnectionsManager.RequestFlagInvokeAfter);
     }
 
+    public void updateChannelUserNameWithRestrictContent(final long chatId, final String userName, final boolean needUpdateRestrict, final boolean isNoForwards) {
+        TLRPC.TL_channels_updateUsername req = new TLRPC.TL_channels_updateUsername();
+        req.channel = getInputChannel(chatId);
+        req.username = userName;
+        getConnectionsManager().sendRequest(req, (response, error) -> {
+            if (response instanceof TLRPC.TL_boolTrue) {
+                AndroidUtilities.runOnUIThread(() -> {
+                    TLRPC.Chat chat = getChat(chatId);
+                    if (userName.length() != 0) {
+                        chat.flags |= TLRPC.CHAT_FLAG_IS_PUBLIC;
+                    } else {
+                        chat.flags &= ~TLRPC.CHAT_FLAG_IS_PUBLIC;
+                    }
+                    chat.username = userName;
+                    ArrayList<TLRPC.Chat> arrayList = new ArrayList<>();
+                    arrayList.add(chat);
+                    getMessagesStorage().putUsersAndChats(null, arrayList, true, true);
+                    getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_CHAT);
+
+                    if (needUpdateRestrict) {
+                        updateRestrictContent(chat, isNoForwards);
+                    } else {
+                        AndroidUtilities.runOnUIThread(() -> loadFullChat(chatId, 0, true), 1000);
+                    }
+                });
+            } else {
+                AndroidUtilities.runOnUIThread(() -> loadFullChat(chatId, 0, true), 1000);
+            }
+
+        }, ConnectionsManager.RequestFlagInvokeAfter);
+    }
+
     public void updateSendUs(long dialogId, TLRPC.Peer selectedPeer, Runnable successCallback, Runnable errorCallback) {
         TLRPC.TL_messages_saveDefaultSendAs req = new TLRPC.TL_messages_saveDefaultSendAs();
         req.peer = getInputPeer(dialogId);
@@ -9184,11 +9216,12 @@ public class MessagesController extends BaseController implements NotificationCe
         TLRPC.TL_messages_toggleNoForwards req = new TLRPC.TL_messages_toggleNoForwards();
         req.enabled = enabled;
         req.peer = getInputPeer(chat);
+        final long chatId = chat.id;
         getConnectionsManager().sendRequest(req, (response, error) -> {
-            if (error != null) {
-                return;
+            if (error == null) {
+                processUpdates((TLRPC.Updates) response, false);
             }
-            processUpdates((TLRPC.Updates) response, false);
+            AndroidUtilities.runOnUIThread(() -> loadFullChat(chatId, 0, true), 1000);
         }, ConnectionsManager.RequestFlagInvokeAfter);
     }
 
