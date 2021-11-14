@@ -61,6 +61,7 @@ import org.telegram.ui.Components.AnimatedFileDrawable;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.Point;
+import org.telegram.ui.Components.SendAsAlert;
 import org.telegram.ui.PaymentFormActivity;
 import org.telegram.ui.TwoStepVerificationActivity;
 import org.telegram.ui.TwoStepVerificationSetupActivity;
@@ -2106,6 +2107,21 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                                 processSentMessage(newMsgObj1.id);
                                 removeFromSendingMessages(newMsgObj1.id, scheduleDate != 0);
                             });
+                        }
+                        if (error != null && error.text != null) {
+                            if (error.text.contains("CHAT_FORWARDS_RESTRICTED")) {
+                                final long parentDialogId = msgObj.messageOwner.dialog_id;
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    getAccountInstance().getMessagesController().loadFullChat(-parentDialogId, 0, true);
+                                });
+                            }
+                            if (error.text.contains("SEND_AS_PEER_INVALID")) {
+                                final long currentDialogId = newMsgObj.messageOwner.dialog_id;
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    SendAsAlert.clearCache();
+                                    getAccountInstance().getMessagesController().loadFullChat(-currentDialogId, 0, true);
+                                });
+                            }
                         }
                     }, ConnectionsManager.RequestFlagCanCompress | ConnectionsManager.RequestFlagInvokeAfter);
 
@@ -5508,6 +5524,13 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                             stopVideoService(newMsgObj.attachPath);
                         }
                         removeFromSendingMessages(newMsgObj.id, scheduled);
+
+                        if (error != null && error.text != null) {
+                            if(error.text.contains("SEND_AS_PEER_INVALID")) {
+                                SendAsAlert.clearCache();
+                                getAccountInstance().getMessagesController().loadFullChat(-newMsgObj.dialog_id, 0, true);
+                            }
+                        }
                     }
                 });
             }

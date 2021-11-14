@@ -9206,7 +9206,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                 }
             } else {
-                if (error != null && (error.text.contains("SEND_AS_PEER_INVALID") || error.text.contains("CHANNEL_INVALID"))) {
+                if (error != null && error.text != null /*&& (error.text.contains("SEND_AS_PEER_INVALID") || error.text.contains("CHANNEL_INVALID") || error.text.contains("CHAT_ADMIN_REQUIRED"))*/) {
                     loadFullChat(-dialogId, 0, true);
                     errorCallback.run();
                 }
