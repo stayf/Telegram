@@ -124,7 +124,7 @@ public class MediaCalendarActivity extends BaseFragment {
     public void selectDayFromMenu(int date) {
         if (!isSelectModeEnabled) {
             isSelectModeEnabled = true;
-            switchSelectedMode(false);
+            switchSelectedMode(true);
         }
         onSelectDate(date);
     }
