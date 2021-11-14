@@ -72,7 +72,7 @@ public class SendAsAlert {
         this.delegate = delegate;
         this.accountInstance = accountInstance;
         this.dialogId = dialogId;
-        if (lastCachedAccount == accountInstance.getCurrentAccount() && lastCacheDid == dialogId && cachedChats != null && SystemClock.elapsedRealtime() - lastCacheTime < 2 * 60 * 1000) {
+        if (lastCachedAccount == accountInstance.getCurrentAccount() && lastCacheDid == dialogId && cachedChats != null && SystemClock.elapsedRealtime() - lastCacheTime < 60 * 1000) {
             showAlert(context, cachedChats, currentPeer, parent);
         } else {
             isLoading = true;

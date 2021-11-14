@@ -47,6 +47,7 @@ import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.JoinCallAlert;
 import org.telegram.ui.Components.MotionBackgroundDrawable;
+import org.telegram.ui.Components.SendAsAlert;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.EditWidgetActivity;
 import org.telegram.ui.LaunchActivity;
@@ -4075,6 +4076,7 @@ public class MessagesController extends BaseController implements NotificationCe
             req.rank = rank;
             getConnectionsManager().sendRequest(req, (response, error) -> {
                 if (error == null) {
+                    SendAsAlert.clearCache();
                     processUpdates((TLRPC.Updates) response, false);
                     AndroidUtilities.runOnUIThread(() -> loadFullChat(chatId, 0, true), 1000);
                 } else {
