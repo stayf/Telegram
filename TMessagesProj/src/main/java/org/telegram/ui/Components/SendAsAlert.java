@@ -1,6 +1,7 @@
 package org.telegram.ui.Components;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Canvas;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -72,11 +73,14 @@ public class SendAsAlert {
         this.delegate = delegate;
         this.accountInstance = accountInstance;
         this.dialogId = dialogId;
-        if (lastCachedAccount == accountInstance.getCurrentAccount() && lastCacheDid == dialogId && cachedChats != null && SystemClock.elapsedRealtime() - lastCacheTime < 60 * 1000) {
+        if (lastCachedAccount == accountInstance.getCurrentAccount() && lastCacheDid == dialogId && cachedChats != null && SystemClock.elapsedRealtime() - lastCacheTime < 2 * 60 * 1000) {
             showAlert(context, cachedChats, currentPeer, parent);
         } else {
             isLoading = true;
             final AlertDialog progressDialog = new AlertDialog(context, 3);
+            progressDialog.setOnDismissListener(dialog -> {
+                isLoading = false;
+            });
             TLRPC.TL_channels_getSendAs req = new TLRPC.TL_channels_getSendAs();
             req.peer = accountInstance.getMessagesController().getInputPeer(dialogId);
             int reqId = accountInstance.getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
@@ -95,6 +99,9 @@ public class SendAsAlert {
                     accountInstance.getMessagesController().putChats(res.chats, false);
                     accountInstance.getMessagesController().putUsers(res.users, false);
                     showAlert(context, res.peers, currentPeer, parent);
+                }
+                if (error != null && error.text != null) {
+                    accountInstance.getMessagesController().loadFullChat(-dialogId, 0, true);
                 }
             }));
             progressDialog.setOnCancelListener(dialog -> accountInstance.getConnectionsManager().cancelRequest(reqId, true));
