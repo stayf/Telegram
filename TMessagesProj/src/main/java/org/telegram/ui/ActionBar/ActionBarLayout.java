@@ -8,6 +8,9 @@
 
 package org.telegram.ui.ActionBar;
 
+import static android.view.MotionEvent.ACTION_DOWN;
+import static android.view.MotionEvent.ACTION_UP;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
@@ -186,6 +189,9 @@ public class ActionBarLayout extends FrameLayout {
             }
         }
 
+        private float rectXDown;
+        private float rectYDown;
+
         @Override
         public boolean dispatchTouchEvent(MotionEvent ev) {
             if (inPreviewModeWithMenu) {
@@ -197,7 +203,17 @@ public class ActionBarLayout extends FrameLayout {
                         Rect rect = new Rect();
                         preview.getLocalVisibleRect(rect);
                         if (rect.contains((int) ev.getX(), (int) ev.getY())) {
-                            frameLayout.onTouchEvent(ev);
+                            if (ev.getAction() == ACTION_DOWN) {
+                                rectXDown = ev.getX();
+                                rectYDown = ev.getY();
+                                frameLayout.onTouchEvent(ev);
+                            } else if (ev.getAction() == ACTION_UP) {
+                                if (Math.abs(rectXDown - ev.getX()) < AndroidUtilities.dp(10) && Math.abs(rectYDown - ev.getY()) < AndroidUtilities.dp(10)) {
+                                    frameLayout.onTouchEvent(ev);
+                                }
+                                rectXDown = 0;
+                                rectYDown = 0;
+                            }
                             return true;
                         }
                     }
@@ -206,7 +222,7 @@ public class ActionBarLayout extends FrameLayout {
                     FileLog.e(e);
                 }
             }
-            if ((inPreviewMode || transitionAnimationPreviewMode) && (ev.getActionMasked() == MotionEvent.ACTION_DOWN || ev.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN)) {
+            if ((inPreviewMode || transitionAnimationPreviewMode) && (ev.getActionMasked() == ACTION_DOWN || ev.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN)) {
                 return false;
             }
             //
@@ -720,7 +736,7 @@ public class ActionBarLayout extends FrameLayout {
     public boolean onTouchEvent(MotionEvent ev) {
         if (!checkTransitionAnimation() && !inActionMode && !animationInProgress) {
             if (fragmentsStack.size() > 1) {
-                if (ev != null && ev.getAction() == MotionEvent.ACTION_DOWN) {
+                if (ev != null && ev.getAction() == ACTION_DOWN) {
                     BaseFragment currentFragment = fragmentsStack.get(fragmentsStack.size() - 1);
                     if (!currentFragment.isSwipeBackEnabled(ev)) {
                         maybeStartTracking = false;
