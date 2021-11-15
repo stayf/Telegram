@@ -1129,13 +1129,13 @@ public class ActionBarLayout extends FrameLayout {
             cell.setOnClickListener(v -> {
                 if (option == 1) {
                     try {
-                        previewOpenAnimationInProgress = true;
-                        inPreviewMode = false;
-                        inPreviewModeWithMenu = false;
-
                         BaseFragment prevFr = fragmentsStack.get(fragmentsStack.size() - 2);
                         BaseFragment prevFr2 = fragmentsStack.get(fragmentsStack.size() - 3);
                         BaseFragment fr = fragmentsStack.get(fragmentsStack.size() - 1);
+
+                        previewOpenAnimationInProgress = true;
+                        inPreviewMode = false;
+                        inPreviewModeWithMenu = false;
 
                         if (Build.VERSION.SDK_INT >= 21) {
                             fr.fragmentView.setOutlineProvider(null);
