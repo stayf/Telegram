@@ -11292,11 +11292,17 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                             if (!existsFinal) {
                                 if (!FileLoader.getInstance(currentAccount).isLoadingFile(currentFileNames[a])) {
                                     menuItem.hideSubItem(gallery_menu_cancel_loading);
+                                    if (menuItem.isAllSubItemsHidden()) {
+                                        menuItem.setVisibility(View.GONE);
+                                    }
                                 } else {
                                     menuItem.showSubItem(gallery_menu_cancel_loading);
                                 }
                             } else {
                                 menuItem.hideSubItem(gallery_menu_cancel_loading);
+                                if (menuItem.isAllSubItemsHidden()) {
+                                    menuItem.setVisibility(View.GONE);
+                                }
                             }
                         }
                     } else {
