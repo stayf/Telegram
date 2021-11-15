@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
@@ -45,6 +46,7 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ActionBar.ThemeDescription;
 import org.telegram.ui.Cells.CheckBoxCell;
+import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.MediaCalendarMainBtnView;
 import org.telegram.ui.Components.MonthView;
@@ -330,14 +332,17 @@ public class MediaCalendarActivity extends BaseFragment {
                             req.revoke = deleteForAll;
                             req.min_date = minDate;
                             req.max_date = maxDate;
-                            getConnectionsManager().sendRequest(req, (response, error) -> {
+
+                            final AlertDialog progressDialog = new AlertDialog(context, 3);
+                            final int reqId = getConnectionsManager().sendRequest(req, (response, error) -> {
                                 if (error == null) {
                                     TLRPC.TL_messages_affectedHistory res = (TLRPC.TL_messages_affectedHistory) response;
                                     getMessagesController().getDifference();
-                                    //этот метод не работает похоже не верные значения передаются от сервер
+                                    //этот метод не работает похоже не верные значения передаются от сервера или лично мне нужно произвести удаление
                                     //getMessagesController().processNewDifferenceParams(-1, res.pts, -1, res.pts_count);
                                     AndroidUtilities.runOnUIThread(() -> {
-                                        getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
+                                        isSelectModeEnabled = false;
+                                        switchSelectedMode(true);
                                         for (int m = 0; m < messagesByYearMounth.size(); m++) {
                                             SparseArray<MonthView.PeriodDay> arr = messagesByYearMounth.get(messagesByYearMounth.keyAt(m));
                                             ArrayList<MonthView.PeriodDay> removedArr = new ArrayList<>();
@@ -363,10 +368,23 @@ public class MediaCalendarActivity extends BaseFragment {
                                         }
                                     });
                                 }
-                            }, ConnectionsManager.RequestFlagInvokeAfter);
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    try {
+                                        progressDialog.dismiss();
+                                    } catch (Exception e) {
+                                        FileLog.e(e);
+                                    }
+                                    if (error != null) {
+                                        AlertsCreator.processError(currentAccount, error, MediaCalendarActivity.this, req);
+                                    }
+                                });
+                            });
+                            progressDialog.setOnCancelListener(dialog -> getConnectionsManager().cancelRequest(reqId, true));
+                            try {
+                                progressDialog.showDelayed(500);
+                            } catch (Exception ignore) {
 
-                            isSelectModeEnabled = false;
-                            switchSelectedMode(true);
+                            }
                         });
                         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
                         AlertDialog dialog = builder.create();

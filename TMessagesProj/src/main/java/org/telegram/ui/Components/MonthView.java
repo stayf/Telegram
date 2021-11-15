@@ -43,6 +43,7 @@ public class MonthView extends FrameLayout {
     public static class VisibleDay {
         public int date;
         public int dayOfWeek;
+        public int lastDayOfMonth;
         public RectF drawRegion = new RectF();
         public boolean isAvailable;
     }
@@ -224,6 +225,7 @@ public class MonthView extends FrameLayout {
             VisibleDay visibleDay = new VisibleDay();
             visibleDay.date = (int) (calendar.getTimeInMillis() / 1000);
             visibleDay.dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+            visibleDay.lastDayOfMonth = daysInMonth;
             visibleDays.put(i, visibleDay);
         }
     }
@@ -341,9 +343,11 @@ public class MonthView extends FrameLayout {
                 canvas.drawCircle(cx, cy, cycleRadius - AndroidUtilities.dp(1), selectedCycleStrokePaint);
                 if (selectedDateStart != 0 && selectedDateEnd != 0) {
                     int dayOfWeek = visibleDays.get(i).dayOfWeek;
+                    int lastDayOfMonth = visibleDays.get(i).lastDayOfMonth;
+                    int dayOfMonth = i + 1;
                     if (selectedDateStart == currentDay) {
                         //справа
-                        if (dayOfWeek != 1) {
+                        if (dayOfWeek != 1 && dayOfMonth != lastDayOfMonth) {
                             tmpPath.moveTo(cx + xStep / 2f, drawRegion.bottom);
                             tmpPath.lineTo(cx + xStep / 2f, drawRegion.top);
                             tmpPath.lineTo(cx, drawRegion.top);
@@ -354,7 +358,7 @@ public class MonthView extends FrameLayout {
                         }
                     } else {
                         //слева
-                        if (dayOfWeek != 2) {
+                        if (dayOfWeek != 2 && dayOfMonth != 1) {
                             tmpPath.moveTo(cx - xStep / 2f, drawRegion.bottom);
                             tmpPath.lineTo(cx - xStep / 2f, drawRegion.top);
                             tmpPath.lineTo(cx, drawRegion.top);
@@ -371,14 +375,38 @@ public class MonthView extends FrameLayout {
                 int dayOfWeek = visibleDays.get(i).dayOfWeek;
                 if (dayOfWeek == 1) {
                     //вс
-                    canvas.drawArc(visibleDays.get(i).drawRegion, -90, 180, true, selectedRangePaint);
-                    canvas.drawRect(cx - xStep / 2f, drawRegion.top, cx, drawRegion.bottom, selectedRangePaint);
+                    int dayOfMonth = i + 1;
+                    if (dayOfMonth == 1) {
+                        canvas.drawArc(drawRegion, 90, 180, true, selectedRangePaint);
+                        canvas.drawArc(drawRegion, -90, 180, true, selectedRangePaint);
+                    } else {
+                        canvas.drawArc(drawRegion, -90, 180, true, selectedRangePaint);
+                        canvas.drawRect(cx - xStep / 2f, drawRegion.top, cx, drawRegion.bottom, selectedRangePaint);
+                    }
                 } else if (dayOfWeek == 2) {
                     //пн
-                    canvas.drawArc(drawRegion, 90, 180, true, selectedRangePaint);
-                    canvas.drawRect(cx, drawRegion.top, cx + xStep / 2f, drawRegion.bottom, selectedRangePaint);
+                    int lastDayOfMonth = visibleDays.get(i).lastDayOfMonth;
+                    int dayOfMonth = i + 1;
+                    if (dayOfMonth == lastDayOfMonth) {
+                        canvas.drawArc(drawRegion, 90, 180, true, selectedRangePaint);
+                        canvas.drawArc(drawRegion, -90, 180, true, selectedRangePaint);
+                    } else {
+                        canvas.drawArc(drawRegion, 90, 180, true, selectedRangePaint);
+                        canvas.drawRect(cx, drawRegion.top, cx + xStep / 2f, drawRegion.bottom, selectedRangePaint);
+                    }
                 } else {
-                    canvas.drawRect(cx - xStep / 2f, drawRegion.top, cx + xStep / 2f, drawRegion.bottom, selectedRangePaint);
+                    //нужно проверить является ли первым или последним днем месяца
+                    int dayOfMonth = i + 1;
+                    int lastDayOfMonth = visibleDays.get(i).lastDayOfMonth;
+                    if (dayOfMonth == 1) {
+                        canvas.drawArc(drawRegion, 90, 180, true, selectedRangePaint);
+                        canvas.drawRect(cx, drawRegion.top, cx + xStep / 2f, drawRegion.bottom, selectedRangePaint);
+                    } else if (dayOfMonth == lastDayOfMonth) {
+                        canvas.drawArc(visibleDays.get(i).drawRegion, -90, 180, true, selectedRangePaint);
+                        canvas.drawRect(cx - xStep / 2f, drawRegion.top, cx, drawRegion.bottom, selectedRangePaint);
+                    } else {
+                        canvas.drawRect(cx - xStep / 2f, drawRegion.top, cx + xStep / 2f, drawRegion.bottom, selectedRangePaint);
+                    }
                 }
             }
 
