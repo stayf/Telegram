@@ -374,8 +374,8 @@ public class MediaCalendarActivity extends BaseFragment {
                                     } catch (Exception e) {
                                         FileLog.e(e);
                                     }
-                                    if (error != null) {
-                                        AlertsCreator.processError(currentAccount, error, MediaCalendarActivity.this, req);
+                                    if (error != null && error.text != null) {
+                                        AlertsCreator.showSimpleToast(MediaCalendarActivity.this, LocaleController.getString("ErrorOccurred", R.string.ErrorOccurred) + "\n" + error.text);
                                     }
                                 });
                             });
