@@ -52,6 +52,7 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
+import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.GroupCallPip;
@@ -1127,54 +1128,61 @@ public class ActionBarLayout extends FrameLayout {
             final int date = fragment.getArguments().getInt("load_date", 0);
             cell.setOnClickListener(v -> {
                 if (option == 1) {
-                    previewOpenAnimationInProgress = true;
-                    inPreviewMode = false;
-                    inPreviewModeWithMenu = false;
+                    try {
+                        previewOpenAnimationInProgress = true;
+                        inPreviewMode = false;
+                        inPreviewModeWithMenu = false;
 
-                    BaseFragment prevFr = fragmentsStack.get(fragmentsStack.size() - 2);
-                    BaseFragment prevFr2 = fragmentsStack.get(fragmentsStack.size() - 3);
-                    BaseFragment fr = fragmentsStack.get(fragmentsStack.size() - 1);
+                        BaseFragment prevFr = fragmentsStack.get(fragmentsStack.size() - 2);
+                        BaseFragment prevFr2 = fragmentsStack.get(fragmentsStack.size() - 3);
+                        BaseFragment fr = fragmentsStack.get(fragmentsStack.size() - 1);
 
-                    if (Build.VERSION.SDK_INT >= 21) {
-                        fr.fragmentView.setOutlineProvider(null);
-                        fr.fragmentView.setClipToOutline(false);
-                    }
-
-                    LinearLayout parentLiner = (LinearLayout) fr.fragmentView.getParent();
-                    if (parentLiner != null) {
-                        parentLiner.removeAllViews();
-                        FrameLayout parentWrap = (FrameLayout) parentLiner.getParent().getParent();
-                        if (parentWrap != null) {
-                            parentWrap.removeAllViews();
-                            parentWrap.addView(fr.fragmentView);
+                        if (Build.VERSION.SDK_INT >= 21) {
+                            fr.fragmentView.setOutlineProvider(null);
+                            fr.fragmentView.setClipToOutline(false);
                         }
-                    }
 
-                    FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) fr.fragmentView.getLayoutParams();
-                    layoutParams.topMargin = layoutParams.bottomMargin = layoutParams.rightMargin = layoutParams.leftMargin = 0;
-                    layoutParams.height = LayoutHelper.MATCH_PARENT;
-                    layoutParams.width = LayoutHelper.MATCH_PARENT;
-                    fr.fragmentView.setLayoutParams(layoutParams);
-
-                    presentFragmentInternalRemoveOld(true, prevFr);
-                    presentFragmentInternalRemoveOld(true, prevFr2);
-
-                    AnimatorSet animatorSet = new AnimatorSet();
-                    animatorSet.playTogether(
-                            ObjectAnimator.ofFloat(fr.fragmentView, View.SCALE_X, 1.0f, 1.05f, 1.0f),
-                            ObjectAnimator.ofFloat(fr.fragmentView, View.SCALE_Y, 1.0f, 1.05f, 1.0f));
-                    animatorSet.setDuration(200);
-                    animatorSet.setInterpolator(new CubicBezierInterpolator(0.42, 0.0, 0.58, 1.0));
-                    animatorSet.addListener(new AnimatorListenerAdapter() {
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            previewOpenAnimationInProgress = false;
-                            fr.onPreviewOpenAnimationEnd();
+                        LinearLayout parentLiner = (LinearLayout) fr.fragmentView.getParent();
+                        if (parentLiner != null) {
+                            parentLiner.removeAllViews();
+                            FrameLayout parentWrap = (FrameLayout) parentLiner.getParent().getParent();
+                            if (parentWrap != null) {
+                                parentWrap.removeAllViews();
+                                parentWrap.addView(fr.fragmentView);
+                            }
                         }
-                    });
-                    animatorSet.start();
 
-                    fr.setInPreviewMode(false);
+                        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) fr.fragmentView.getLayoutParams();
+                        layoutParams.topMargin = layoutParams.bottomMargin = layoutParams.rightMargin = layoutParams.leftMargin = 0;
+                        layoutParams.height = LayoutHelper.MATCH_PARENT;
+                        layoutParams.width = LayoutHelper.MATCH_PARENT;
+                        fr.fragmentView.setLayoutParams(layoutParams);
+
+                        presentFragmentInternalRemoveOld(true, prevFr);
+                        //чат мог быть закрыт ранее, например после очистки всей истории
+                        if (prevFr2 instanceof ChatActivity) {
+                            presentFragmentInternalRemoveOld(true, prevFr2);
+                        }
+
+                        AnimatorSet animatorSet = new AnimatorSet();
+                        animatorSet.playTogether(
+                                ObjectAnimator.ofFloat(fr.fragmentView, View.SCALE_X, 1.0f, 1.05f, 1.0f),
+                                ObjectAnimator.ofFloat(fr.fragmentView, View.SCALE_Y, 1.0f, 1.05f, 1.0f));
+                        animatorSet.setDuration(200);
+                        animatorSet.setInterpolator(new CubicBezierInterpolator(0.42, 0.0, 0.58, 1.0));
+                        animatorSet.addListener(new AnimatorListenerAdapter() {
+                            @Override
+                            public void onAnimationEnd(Animator animation) {
+                                previewOpenAnimationInProgress = false;
+                                fr.onPreviewOpenAnimationEnd();
+                            }
+                        });
+                        animatorSet.start();
+
+                        fr.setInPreviewMode(false);
+                    } catch (Exception e) {
+                        //ignore
+                    }
                 } else {
                     BaseFragment prevFr = fragmentsStack.get(fragmentsStack.size() - 2);
                     if (prevFr instanceof MediaCalendarActivity) {
